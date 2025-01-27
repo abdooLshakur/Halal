@@ -4,7 +4,7 @@ const upload = require("../middleware/Fileuploads")
 const authenticateToken = require('../middleware/Auth');
 const { deleteBanner, updateBanner, getAllBanner, CreateBanner, } = require("../controllers/BannerController");
 
-router.post("/api/add-banner", authenticateToken, upload.single('banner_img'), CreateBanner)
+router.post("/api/create-banner", authenticateToken, upload.single('banner_img'), CreateBanner)
 router.get("/api/banners", authenticateToken, getAllBanner)
 router.put("/api/update-banner/:id", authenticateToken, upload.single('banner_img'), updateBanner)
 router.delete("/api/delete-banner/:id", authenticateToken, deleteBanner)

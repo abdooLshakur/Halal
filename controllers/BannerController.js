@@ -7,14 +7,14 @@ const CreateBanner = async(req, res) => {
 
         const New_banner = { banner_img:Bannerpath, banner_header, banner_descp, banner_link };
         const Banner = await new Banners(New_banner).save();
-        const isLoggedIn = req.user && req.user.isAuthenticated;
+        // const isLoggedIn = req.user && req.user.isAuthenticated;
 
-        if (!isLoggedIn) {
-          return res.status(401).json({
-            success: false,
-            message: "Merchant or Admin not logged in",
-          });
-        }
+        // if (!isLoggedIn) {
+        //   return res.status(401).json({
+        //     success: false,
+        //     message: "Merchant or Admin not logged in",
+        //   });
+        // }
         res.json({
             success: true,
             message: "Banner created Successfully",
@@ -30,14 +30,7 @@ const CreateBanner = async(req, res) => {
 };
 
 const getAllBanner = (req, res) => {
-  const isLoggedIn = req.user && req.user.isAuthenticated;
-
-  if (!isLoggedIn) {
-    return res.status(401).json({
-      success: false,
-      message: "Merchant or Admin not logged in",
-    });
-  }
+ 
   Banners.find({}, { })
     .then((resp) => {
       res.json({
@@ -57,14 +50,7 @@ const getAllBanner = (req, res) => {
 
 
 const updateBanner = async (req, res) => {
-  const isLoggedIn = req.user && req.user.isAuthenticated;
 
-  if (!isLoggedIn) {
-    return res.status(401).json({
-      success: false,
-      message: "Merchant or Admin not logged in",
-    });
-  }
  try {
   const id = req.params.id;
   const Bannerpath = req.file ? req.file.path : null;
@@ -97,14 +83,7 @@ const updateBanner = async (req, res) => {
 
 
 const deleteBanner = (req, res) => {
-  const isLoggedIn = req.user && req.user.isAuthenticated;
-
-  if (!isLoggedIn) {
-    return res.status(401).json({
-      success: false,
-      message: "Merchant or Admin not logged in",
-    });
-  }
+ 
   const id = req.params.id;
 
   if (!id) {

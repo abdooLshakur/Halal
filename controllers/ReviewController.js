@@ -8,14 +8,7 @@ const CreateReview = async(req, res) => {
       
       const id = req.params.id;
       const productid = req.params.productid;
-      const isLoggedIn = req.user && req.user.isAuthenticated;
-
-      if (!isLoggedIn) {
-        return res.status(401).json({
-          success: false,
-          message: "Merchant or Admin not logged in",
-        });
-      }
+     
       const check_user = await User.findById(id).select("_id first_name last_name avatar");
       if (!check_user) {
         return res.status(404).json({ success: false, message: "User ID does not exist" });
@@ -65,14 +58,7 @@ const getAllReviews = (req, res) => {
 
 
 const updateReview = async (req, res) => {
-  const isLoggedIn = req.user && req.user.isAuthenticated;
-
-  if (!isLoggedIn) {
-    return res.status(401).json({
-      success: false,
-      message: "Merchant or Admin not logged in",
-    });
-  }
+ 
  try {
   const id = req.params.id;
   const resp = await Reviews.findByIdAndUpdate(
@@ -101,15 +87,7 @@ const updateReview = async (req, res) => {
 
 
 const deleteReview = (res, req) => {
-  const isLoggedIn = req.user && req.user.isAuthenticated;
-
-  if (!isLoggedIn) {
-    return res.status(401).json({
-      success: false,
-      message: "Merchant or Admin not logged in",
-    });
-  }
-  const id = req.params.id;
+   const id = req.params.id;
   Reviews.findByIdAndDelete(id)
     .then(() => {
       res.json({

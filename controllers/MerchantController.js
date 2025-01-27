@@ -229,14 +229,7 @@ const verifyUser = async (req, res) => {
   try {
     const id = req.body.id;
     const check_user = await Merchant.findById(id);
-    const isLoggedIn = req.user && req.user.isAuthenticated;
-
-    if (!isLoggedIn) {
-      return res.status(401).json({
-        success: false,
-        message: "Merchant or Admin not logged in",
-      });
-    }
+   
     if (check_user.is_verified !== "true") {
       res.json({ success: false, message: "User not authorized" });
       return;

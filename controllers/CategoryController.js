@@ -41,14 +41,14 @@ const CreateCategory = async (req, res) => {
 };
 
 const getmerchantcategory = (req, res) => {
-    const isLoggedIn = req.user && req.user.isAuthenticated;
+    // const isLoggedIn = req.Merchant && req.Merchant.isAuthenticated;
 
-    if (!isLoggedIn) {
-      return res.status(401).json({
-        success: false,
-        message: "Merchant or Admin not logged in",
-      });
-    }
+    // if (!isLoggedIn) {
+    //   return res.status(401).json({
+    //     success: false,
+    //     message: "Merchant or Admin not logged in",
+    //   });
+    // }
     Category.find({}, {})
         .then((resp) => {
             res.json({
@@ -67,14 +67,7 @@ const getmerchantcategory = (req, res) => {
 };
 
 const updateCategory = async (req, res) => {
-    const isLoggedIn = req.user && req.user.isAuthenticated;
-
-    if (!isLoggedIn) {
-      return res.status(401).json({
-        success: false,
-        message: "Merchant or Admin not logged in",
-      });
-    }
+   
     try {
         const id = req.params.id;
         const iconPath = req.file ? req.file.path : null;
@@ -109,14 +102,7 @@ const updateCategory = async (req, res) => {
 };
 
 const deleteCategory = (req, res) => {
-    const isLoggedIn = req.user && req.user.isAuthenticated;
-
-    if (!isLoggedIn) {
-      return res.status(401).json({
-        success: false,
-        message: "Merchant or Admin not logged in",
-      });
-    }
+ 
     const id = req.params.id;
 
     if (!id) {

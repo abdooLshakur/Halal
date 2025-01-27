@@ -61,14 +61,7 @@ res.json({
 }
 
 const getAllUsers = (req, res) => {
-  const isLoggedIn = req.user && req.user.isAuthenticated;
-
-  if (!isLoggedIn) {
-    return res.status(401).json({
-      success: false,
-      message: "Merchant or Admin not logged in",
-    });
-  }
+  
   Users.find({}, {password: 0, __v: 0})
     .then((resp) => {
       res.json({
@@ -87,14 +80,7 @@ const getAllUsers = (req, res) => {
 };
 
 const getsingleUser = (req, res) => {
-  const isLoggedIn = req.user && req.user.isAuthenticated;
-
-  if (!isLoggedIn) {
-    return res.status(401).json({
-      success: false,
-      message: "Merchant or Admin not logged in",
-    });
-  }
+ 
   const id = req.params.user_id;
   Users.findOne(id,{}, {password: 0, __v: 0})
     .then((resp) => {
@@ -114,14 +100,7 @@ const getsingleUser = (req, res) => {
 };
 
 const updateUser = async (req, res) => {
-  const isLoggedIn = req.user && req.user.isAuthenticated;
-
-  if (!isLoggedIn) {
-    return res.status(401).json({
-      success: false,
-      message: "Merchant or Admin not logged in",
-    });
-  }
+ 
  try {
   const id = req.params.id;
   const avatarPath =  req.file ? req.file.path : null;
@@ -154,14 +133,7 @@ const updateUser = async (req, res) => {
 };
 
 const deleteUser = (res, req) => {
-  const isLoggedIn = req.user && req.user.isAuthenticated;
-
-  if (!isLoggedIn) {
-    return res.status(401).json({
-      success: false,
-      message: "Merchant or Admin not logged in",
-    });
-  }
+  
   const id = req.params.id;
   Users.findByIdAndDelete(id)
     .then(() => {
