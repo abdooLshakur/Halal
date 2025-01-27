@@ -48,7 +48,7 @@ app.use( BannerRoutes);
 app.use( WishlistRoutes);
 
 // Serve React app
-const buildPath = path.resolve("C:/Users/User/Desktop/Codex-Dashbord/build");
+const buildPath = path.resolve("../Codex-Dashbord/build");
 app.use(express.static(buildPath));
 
 // Serve index.html for non-API routes
