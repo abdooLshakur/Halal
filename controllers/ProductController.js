@@ -138,9 +138,8 @@ const updateproduct = async (req, res) => {
 
 const TrendingProduct = async (req, res) => {
   try {
-    const Merchantid = req.params.Merchantid;
+    const Merchantid = req.params.id;
     const productid = req.params.productid;
-  
     // Check if the merchant exists
     const check_merchant = await Merchant.findById(Merchantid);
     if (!check_merchant) {
@@ -156,14 +155,13 @@ const TrendingProduct = async (req, res) => {
         message: "Merchant not authorized",
       });
     }
-    console.log('is_verified:', check_merchant.is_verified);
 
   
     // Update the product's trending status
     const updatedProduct = await Product.findByIdAndUpdate(
       productid,
       { is_trending: true },
-      { new: true } // Returns the updated document
+      { new: true } 
     );
   
     if (!updatedProduct) {
@@ -192,7 +190,7 @@ const TrendingProduct = async (req, res) => {
 
 const featuredProduct = async (req, res) => {
   try {
-    const Merchantid = req.params.Merchantid;
+    const Merchantid = req.params.id;
     const productid = req.params.productid;
   
     // Check if the merchant exists
@@ -245,7 +243,7 @@ const featuredProduct = async (req, res) => {
 
 const RemovefromTrending = async (req, res) => {
   try {
-    const Merchantid = req.params.Merchantid;
+    const Merchantid = req.params.id;
     const productid = req.params.productid;
   
     // Check if the merchant exists
@@ -257,8 +255,61 @@ const RemovefromTrending = async (req, res) => {
       });
     }
   
-    // Check if the merchant is verified (ensure proper Boolean comparison)
-    if (check_merchant.is_verified !== true) {  // If it's a Boolean field
+    // Check if the merchant is verified
+    if (check_merchant.is_verified !== true) {  
+      return res.status(403).json({
+        success: false,
+        message: "Merchant not authorized",
+      });
+    }
+  
+    // Update the product's featured status
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productid,
+      { is_trending: false },
+      { new: true } 
+    );
+  
+    if (!updatedProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+  
+    // Success response
+    return res.status(200).json({
+      success: true,
+      message: "Product Removed from trending successfully",
+      product: updatedProduct,
+    });
+  } catch (err) {
+    // Catch and json error details
+    return res.status(500).json({
+      success: false,
+      message: `An error has occurred: ${err.message}`,
+    });
+  }
+  
+  
+};
+
+const RemovefromFeatured = async (req, res) => {
+  try {
+    const Merchantid = req.params.id;
+    const productid = req.params.productid;
+  
+    // Check if the merchant exists
+    const check_merchant = await Merchant.findById(Merchantid);
+    if (!check_merchant) {
+      return res.status(404).json({
+        success: false,
+        message: "Merchant not found",
+      });
+    }
+  
+    // Check if the merchant is verified
+    if (check_merchant.is_verified !== true) {  
       return res.status(403).json({
         success: false,
         message: "Merchant not authorized",
@@ -269,7 +320,7 @@ const RemovefromTrending = async (req, res) => {
     const updatedProduct = await Product.findByIdAndUpdate(
       productid,
       { is_featured: false },
-      { new: true } // Returns the updated document
+      { new: true } 
     );
   
     if (!updatedProduct) {
@@ -295,58 +346,8 @@ const RemovefromTrending = async (req, res) => {
   
   
 };
-const RemovefromFeatured = async (req, res) => {
-  try {
-    const Merchantid = req.params.Merchantid;
-    const productid = req.params.productid;
-  
-    // Check if the merchant exists
-    const check_merchant = await Merchant.findById(Merchantid);
-    if (!check_merchant) {
-      return res.status(404).json({
-        success: false,
-        message: "Merchant not found",
-      });
-    }
-  
-    // Check if the merchant is verified (ensure proper Boolean comparison)
-    if (check_merchant.is_verified !== true) {  // If it's a Boolean field
-      return res.status(403).json({
-        success: false,
-        message: "Merchant not authorized",
-      });
-    }
-  
-    // Update the product's featured status
-    const updatedProduct = await Product.findByIdAndUpdate(
-      productid,
-      { is_featured: false },
-      { new: true } // Returns the updated document
-    );
-  
-    if (!updatedProduct) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-    }
-  
-    // Success response
-    return res.status(200).json({
-      success: true,
-      message: "Product remove from Featured successfully",
-      product: updatedProduct,
-    });
-  } catch (err) {
-    // Catch and json error details
-    return res.status(500).json({
-      success: false,
-      message: `An error has occurred: ${err.message}`,
-    });
-  }
-  
-  
-};
+
+
 const deleteProduct = (req, res) => {
   const id = req.params.id;
 
