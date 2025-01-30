@@ -6,61 +6,60 @@ const SECRET_KEY = process.env.SECRET_KEY;
 
 const CreateMerchant = async (req, res) => {
   try {
-    const {
-      first_name,
-      last_name,
-      email,
-      phone,
-      password,
-      banner,
-      store_name,
-      store_descp,
-      social_meadia, 
-    } = req.body;
+    const { first_name, last_name, email, password, store_name, phone, store_descp} = req.body;
+   
+    // Validate required fields
+    if (!first_name || !last_name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
 
-    const check_user = await Merchant.findOne({ email });
+ const check_user = await Merchant.findOne({ email });
     if (check_user) {
       return res.status(400).json({
         success: false,
         message: "Email Already Exists",
       });
     }
+    // Validate password format
+    if (typeof password !== "string" || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
 
-    const avatarPath = req.file ? req.file.path : null;
+    // Proceed with bcrypt hashing 
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const encrypt_password = await bcrypt.hash(password, 12);
-
-    const New_member = {
+    const newMerchant = new Merchant({
       first_name,
       last_name,
       email,
       phone,
-      banner,
       store_name,
       store_descp,
-      social_meadia,
-      avatar: avatarPath,
-      password: encrypt_password,
-    };
+      password: hashedPassword,
+    });
 
-    const New_merchant = await new Merchant(New_member).save();
-
+    const savedMerchant = await newMerchant.save();
     res.status(201).json({
       success: true,
       message: "Merchant created successfully",
-      data: {
-        Name: `${New_merchant.first_name} ${New_merchant.last_name}`,
-      },
+      data: savedMerchant,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Error in CreateMerchant:", err); 
     res.status(500).json({
       success: false,
-      message: "Failed to create Merchant",
+      message: "Failed to create merchant",
       error: err.message,
     });
   }
 };
+
 
 
 const loginMerchant = async (req, res) => {

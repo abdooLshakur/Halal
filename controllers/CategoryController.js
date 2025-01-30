@@ -14,29 +14,24 @@ const CreateCategory = async (req, res) => {
             });
             return
         }
-        const iconpath = req.file ? req.file.path : null;
-        const New_category = {
+        const iconPath = req.file ? req.file.path : null;
+        const New_category = new Category({
             merchant_id: checkifMerchant._id,
             name: req.body.name,
-            icon: iconpath,
-        };
-        const isLoggedIn = req.user && req.user.isAuthenticated;
+            icon: iconPath,
+        });
 
-        if (!isLoggedIn) {
-          return res.status(401).json({
-            success: false,
-            message: "Merchant or Admin not logged in",
-          });
-        }
-        const resp = await new Category(New_category).save();
+
+        const resp = await New_category.save();
         res.json({ success: true, message: "Category Created Successfully", data: resp });
 
-    } catch (err) {
-        res.json({
+    }catch (err) {
+        res.status(err.status || 500).json({
             success: false,
             message: "Failed To Create Category",
-            error: err.message,
-        })
+            error: err.message || "Internal Server Error",
+        });
+    
     }
 };
 
@@ -129,7 +124,7 @@ const deleteCategory = (req, res) => {
             res.status(500).json({
                 success: false,
                 message: "Failed to delete category",
-                error: err.message, // Fixed typo: `massage` -> `message`
+                error: err.message, 
             });
         });
 };
