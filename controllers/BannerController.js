@@ -7,14 +7,6 @@ const CreateBanner = async(req, res) => {
 
         const New_banner = { banner_img:Bannerpath, banner_header, banner_descp, banner_link };
         const Banner = await new Banners(New_banner).save();
-        // const isLoggedIn = req.user && req.user.isAuthenticated;
-
-        // if (!isLoggedIn) {
-        //   return res.status(401).json({
-        //     success: false,
-        //     message: "Merchant or Admin not logged in",
-        //   });
-        // }
         res.json({
             success: true,
             message: "Banner created Successfully",

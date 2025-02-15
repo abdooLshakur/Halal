@@ -36,14 +36,6 @@ const CreateCategory = async (req, res) => {
 };
 
 const getmerchantcategory = (req, res) => {
-    // const isLoggedIn = req.Merchant && req.Merchant.isAuthenticated;
-
-    // if (!isLoggedIn) {
-    //   return res.status(401).json({
-    //     success: false,
-    //     message: "Merchant or Admin not logged in",
-    //   });
-    // }
     Category.find({}, {})
         .then((resp) => {
             res.json({
