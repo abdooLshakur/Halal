@@ -3,13 +3,15 @@ const router = express.Router();
 const upload = require("../middleware/Fileuploads")
 const authenticateToken = require('../middleware/Auth');
 
-const {CreateUser, loginUser, getsingleUser, getAllUsers, updateUser, deleteUser} = require("../controllers/UserController")
+const {CreateUser, loginUser, getsingleUser, getAllUsers, updateUser, deleteUser, requestPasswordReset, resetPassword,} = require("../controllers/UserController")
 
-router.post("/api/register-user", authenticateToken, upload.single('avatar'), CreateUser);
-router.post("/api/user-login", loginUser);
-router.put('/api/update-user/:id', authenticateToken, upload.single('avatar'), updateUser);
-router.get('/api/users', authenticateToken, getAllUsers);
-router.get('/api/user', authenticateToken, getsingleUser);
-router.delete('/api/delete-user', authenticateToken, deleteUser);
+router.post("/register-User", upload.single('avatar'), CreateUser);
+router.post("/user-login", loginUser);
+router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updateUser);
+router.post("/request-password-reset", requestPasswordReset);
+router.post("/reset-password", resetPassword);
+router.get('/users', getAllUsers);
+router.get('/user/:id',  getsingleUser);
+router.delete('/delete-user', authenticateToken, deleteUser);
 
 module.exports = router;

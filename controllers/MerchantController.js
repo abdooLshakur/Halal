@@ -1,10 +1,10 @@
 const bcrypt = require('bcryptjs');
-const Merchant = require("../models/MerchantModel")
+const Admin = require("../models/AdminModel")
 const jwt = require('jsonwebtoken');
 const SECRET_KEY = process.env.SECRET_KEY;
 
 
-const CreateMerchant = async (req, res) => {
+const CreateAdmin = async (req, res) => {
   try {
     const { first_name, last_name, email, password, store_name, phone, store_descp} = req.body;
    
@@ -16,7 +16,7 @@ const CreateMerchant = async (req, res) => {
       });
     }
 
- const check_user = await Merchant.findOne({ email });
+ const check_user = await Admin.findOne({ email });
     if (check_user) {
       return res.status(400).json({
         success: false,
@@ -34,7 +34,7 @@ const CreateMerchant = async (req, res) => {
     // Proceed with bcrypt hashing 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newMerchant = new Merchant({
+    const newAdmin = new Admin({
       first_name,
       last_name,
       email,
@@ -44,17 +44,17 @@ const CreateMerchant = async (req, res) => {
       password: hashedPassword,
     });
 
-    const savedMerchant = await newMerchant.save();
+    const savedAdmin = await newAdmin.save();
     res.status(201).json({
       success: true,
-      message: "Merchant created successfully",
-      data: savedMerchant,
+      message: "Admin created successfully",
+      data: savedAdmin,
     });
   } catch (err) {
-    console.error("Error in CreateMerchant:", err); 
+    console.error("Error in CreateAdmin:", err); 
     res.status(500).json({
       success: false,
-      message: "Failed to create merchant",
+      message: "Failed to create Admin",
       error: err.message,
     });
   }
@@ -62,29 +62,29 @@ const CreateMerchant = async (req, res) => {
 
 
 
-const loginMerchant = async (req, res) => {
+const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find merchant by email
-    const merchant = await Merchant.findOne({ email });
-    if (!merchant) {
+    // Find Admin by email
+    const Admin = await Admin.findOne({ email });
+    if (!Admin) {
       return res.status(404).json({
         success: false,
-        message: "Email / Merchant not found",
+        message: "Email / Admin not found",
       });
     }
 
-    // Check if merchant is verified
-    if (!merchant.is_verified) {
+    // Check if Admin is verified
+    if (!Admin.is_verified) {
       return res.status(403).json({
         success: false,
-        message: "Merchant not verified",
+        message: "Admin not verified",
       });
     }
 
     // Compare passwords
-    const isMatch = await bcrypt.compare(password, merchant.password);
+    const isMatch = await bcrypt.compare(password, Admin.password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -93,24 +93,24 @@ const loginMerchant = async (req, res) => {
     }
 
     // Generate token
-    const token = jwt.sign({ id: merchant._id, isAuthenticated: Merchant.isAuthenticated === "true" }, process.env.SECRET_KEY, {
+    const token = jwt.sign({ id: Admin._id, isAuthenticated: Admin.isAuthenticated === "true" }, process.env.SECRET_KEY, {
       expiresIn: '10m',
     });
 
-    // Update merchant's isAuthenticated field
-    await Merchant.findByIdAndUpdate(merchant._id, { isAuthenticated: true });
+    // Update Admin's isAuthenticated field
+    await Admin.findByIdAndUpdate(Admin._id, { isAuthenticated: true });
 
-    // Respond with merchant data and token
+    // Respond with Admin data and token
     res.status(200).json({
       success: true,
       message: "Login successful",
       data: {
-        id: merchant._id,
-        first_name: merchant.first_name,
-        last_name: merchant.last_name,
-        email: merchant.email,
-        phone: merchant.phone,
-        store_name: merchant.store_name,
+        id: Admin._id,
+        first_name: Admin.first_name,
+        last_name: Admin.last_name,
+        email: Admin.email,
+        phone: Admin.phone,
+        store_name: Admin.store_name,
         token,
       },
     });
@@ -123,65 +123,65 @@ const loginMerchant = async (req, res) => {
   }
 };
 
-const getAllMerchants = async (req, res) => {
+const getAllAdmins = async (req, res) => {
   try {
-    const resp = await Merchant.find({}, {password: 0, is_active: 0, __v: 0})
+    const resp = await Admin.find({}, {password: 0, is_active: 0, __v: 0})
     const isLoggedIn = req.user && req.user.isAuthenticated;
 
     if (!isLoggedIn) {
       return res.status(401).json({
         success: false,
-        message: "Merchant or Admin not logged in",
+        message: "Admin or Admin not logged in",
       });
     }
     res.json({
       success: true,
-      message: "All Merchants",
+      message: "All Admins",
       data: resp,
     });
   } catch (err) {
     res.json({
       success: false,
-      message: "Failed to Fetch Merchants",
+      message: "Failed to Fetch Admins",
       error: err.massage,
     });
   }
 };
 
-const getsingleMerchant = async (req, res) => {
+const getsingleAdmin = async (req, res) => {
 
   try {
-    const id = req.params.Merchant_id
-    const resp = await Merchant.findOne(id, {}, {password: 0, __v: 0})
+    const id = req.params.Admin_id
+    const resp = await Admin.findOne(id, {}, {password: 0, __v: 0})
     const isLoggedIn = req.user && req.user.isAuthenticated;
 
     if (!isLoggedIn) {
       return res.status(401).json({
         success: false,
-        message: "Merchant or Admin not logged in",
+        message: "Admin or Admin not logged in",
       });
     }
     res.json({
       success: true,
-      message: "Merchant",
+      message: "Admin",
       data: resp,
     });
   } catch (err) {
     res.json({
       success: false,
-      message: "Failed to Fetch Merchant",
+      message: "Failed to Fetch Admin",
       error: err.massage,
     });
   }
 };
 
-const updateMerchant = async (req, res) => {
+const updateAdmin = async (req, res) => {
   try {
     const id = req.params.id;
     const avatarPath = req.file ? req.file.path : null;
     const bannerPath = req.file ? req.file.path : null;
 
-    const resp = await Merchant.findByIdAndUpdate(
+    const resp = await Admin.findByIdAndUpdate(
       id,
       {
         first_name: req.body.first_name,
@@ -197,25 +197,25 @@ const updateMerchant = async (req, res) => {
     )
 
     if (!id) {
-      return res.status(404).json({ error: 'Merchant not found' });
+      return res.status(404).json({ error: 'Admin not found' });
     }
     const isLoggedIn = req.user && req.user.isAuthenticated;
 
     if (!isLoggedIn) {
       return res.status(401).json({
         success: false,
-        message: "Merchant or Admin not logged in",
+        message: "Admin or Admin not logged in",
       });
     }
     res.json({
       success: true,
-      message: "Merchant Updated Successfully",
+      message: "Admin Updated Successfully",
       data: resp
     });
   } catch (err) {
     res.json({
       success: false,
-      message: "Failed to Update Merchant",
+      message: "Failed to Update Admin",
       error: err.massage,
     });
   }
@@ -227,13 +227,13 @@ const updateMerchant = async (req, res) => {
 const verifyUser = async (req, res) => {
   try {
     const id = req.body.id;
-    const check_user = await Merchant.findById(id);
+    const check_user = await Admin.findById(id);
    
     if (check_user.is_verified !== "true") {
       res.json({ success: false, message: "User not authorized" });
       return;
     }
-    await Merchant.findByIdAndUpdate({ is_active: true });
+    await Admin.findByIdAndUpdate({ is_active: true });
     res.json({ success: true, message: "User Verified Successfully" });
   } catch (err) {
     res.json({
@@ -243,7 +243,7 @@ const verifyUser = async (req, res) => {
   }
 };
 
-const deleteMerchant = async (res, req) => {
+const deleteAdmin = async (res, req) => {
   const id = req.params.id;
   if (!id) {
     return res.status(404).json({ error: 'User not found' });
@@ -253,33 +253,33 @@ const deleteMerchant = async (res, req) => {
   if (!isLoggedIn) {
     return res.status(401).json({
       success: false,
-      message: "Merchant or Admin not logged in",
+      message: "Admin or Admin not logged in",
     });
   }
 
-  const resp = await Merchant.findByIdAndDelete(id)
+  const resp = await Admin.findByIdAndDelete(id)
   try{
       res.json({
         success: true,
-        message: "Merchant Deleted Successfully",
+        message: "Admin Deleted Successfully",
         data: resp
       });
     }
     catch{
       res.json({
         success: false,
-        message: "Failed to Delete Merchant",
+        message: "Failed to Delete Admin",
         error: err.massage,
       });
     }
 };
 
 module.exports = {
-  CreateMerchant,
-  loginMerchant,
-  getAllMerchants,
-  updateMerchant,
-  getsingleMerchant,
+  CreateAdmin,
+  loginAdmin,
+  getAllAdmins,
+  updateAdmin,
+  getsingleAdmin,
   verifyUser,
-  deleteMerchant
+  deleteAdmin
 };
