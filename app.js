@@ -22,7 +22,7 @@ if (!dbUrl || !SECRET_KEY) {
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'https://halal-1.onrender.com',
   credentials: true,
 }));
 app.use(cookieParser());
