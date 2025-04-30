@@ -108,7 +108,7 @@ const loginUser = async (req, res) => {
       process.env.SECRET_KEY,
       { expiresIn: '7d' }
     );
-    
+
 
 
     // Set token cookie
@@ -122,18 +122,18 @@ const loginUser = async (req, res) => {
     // Set user cookie with basic user info
     const safeUser = {
       id: user._id,
-      name: user.first_name + " " +   user.last_name,
+      name: user.first_name + " " + user.last_name,
       email: user.email,
       avatar: user.avatar,
     };
-    
+
     res.cookie("user", JSON.stringify(safeUser), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    
+
     res.json({
       success: true,
       message: "Login successful",
@@ -156,6 +156,8 @@ const reconsent = (req, res) => {
   try {
     const token = req.cookies.token;
     const userCookie = req.cookies.user;
+    console.log("Token cookie:", req.cookies.token);
+    console.log("User cookie:", req.cookies.user);
 
     if (!token || !userCookie) {
       return res.status(400).json({ success: false, message: "Missing cookies" });
@@ -189,7 +191,7 @@ const reconsent = (req, res) => {
 
 // Get all users (excluding password & version field)
 const getAllUsers = async (req, res) => {
-  const { page = 1, limit = 9, location, ethnicity, age, gender, maritalStatus, height, weight,  } = req.query;
+  const { page = 1, limit = 9, location, ethnicity, age, gender, maritalStatus, height, weight, } = req.query;
 
   const filters = {};
   if (location) filters.location = location;
@@ -357,7 +359,7 @@ const requestPasswordReset = async (req, res) => {
       `,
     };
 
-     await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
 
     res.status(200).json({
       message: "Reset link sent to your email",
