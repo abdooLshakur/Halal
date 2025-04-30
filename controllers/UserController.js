@@ -150,7 +150,9 @@ const loginUser = async (req, res) => {
 };
 
 // Refresh or re-send cookies after user consents
-const reconsent = async (req, res) => {
+// controllers/authController.js
+
+const reconsent = (req, res) => {
   try {
     const token = req.cookies.token;
     const userCookie = req.cookies.user;
@@ -159,6 +161,7 @@ const reconsent = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing cookies" });
     }
 
+    // Re-set cookies
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -173,9 +176,13 @@ const reconsent = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.json({ success: true, message: "Consent acknowledged. Cookies re-set." });
+    return res.json({ success: true, message: "Consent acknowledged. Cookies re-sent." });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Consent handling failed", error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to re-set cookies",
+      error: err.message,
+    });
   }
 };
 
