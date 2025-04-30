@@ -22,7 +22,7 @@ if (!dbUrl || !SECRET_KEY) {
 
 // Middleware
 app.use(cors({
-  origin: 'https://halalmatch.vercel.app/',
+  origin: 'https://halalmatch.vercel.app',
   credentials: true,
 }));
 app.use(cookieParser());
