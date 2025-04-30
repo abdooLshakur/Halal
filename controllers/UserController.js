@@ -149,43 +149,15 @@ const loginUser = async (req, res) => {
   }
 };
 
-// Refresh or re-send cookies after user consents
-// controllers/authController.js
+const acknowledgeConsent = (req, res) => {
+  res.cookie("cookie_consent", "accepted", {
+    sameSite: "none",      
+    secure: true,          
+    httpOnly: true,        
+    maxAge: 365 * 24 * 60 * 60 * 1000,
+  });
 
-const reconsent = (req, res) => {
-  try {
-    const token = req.cookies.token;
-    const userCookie = req.cookies.user;
-    console.log("Token cookie:", req.cookies.token);
-    console.log("User cookie:", req.cookies.user);
-
-    if (!token || !userCookie) {
-      return res.status(400).json({ success: false, message: "Missing cookies" });
-    }
-
-    // Re-set cookies
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.cookie("user", userCookie, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    return res.json({ success: true, message: "Consent acknowledged. Cookies re-sent." });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: "Failed to re-set cookies",
-      error: err.message,
-    });
-  }
+  res.status(200).json({ success: true, message: "Consent acknowledged" });
 };
 
 
@@ -444,7 +416,7 @@ module.exports = {
   resetPassword,
   requestPasswordReset,
   updateUser,
-  reconsent,
+  acknowledgeConsent,
   deleteUser,
   logoutUser,
 };
