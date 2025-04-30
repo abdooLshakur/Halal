@@ -95,61 +95,62 @@ const loginUser = async (req, res) => {
     const user = await Users.findOne({ email });
 
     if (!user) {
-      return res.json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.json({ success: false, message: "Invalid password" });
+      return res.status(401).json({ success: false, message: "Invalid password" });
     }
 
     const token = jwt.sign(
       { id: user._id, isAuthenticated: user.isAuthenticated === "true" },
       process.env.SECRET_KEY,
-      { expiresIn: '7d' }
+      { expiresIn: "7d" }
     );
 
-
-
-    // Set token cookie
-    res.cookie("token", token, {
+    // Cookie settings
+    const cookieOptions = {
       httpOnly: true,
-      secure: true, 
+      secure: true,
       sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-    
-    
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    };
 
-    // Set user cookie with basic user info
+    // Set secure token cookie
+    res.cookie("token", token, cookieOptions);
+
+    // Prepare safe user data
     const safeUser = {
       id: user._id,
-      name: user.first_name + " " + user.last_name,
+      name: `${user.first_name} ${user.last_name}`,
       email: user.email,
       avatar: user.avatar,
     };
 
+    // Set secure user info cookie
     res.cookie("user", JSON.stringify(safeUser), {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      ...cookieOptions,
+      httpOnly: false, // Set to false if frontend JS (js-cookie) needs to read it
     });
 
-    res.json({
+    // Send response
+    res.status(200).json({
       success: true,
       message: "Login successful",
       data: safeUser,
     });
 
   } catch (err) {
-    res.json({
+    console.error("Login error:", err);
+    res.status(500).json({
       success: false,
       message: "Login failed",
       error: err.message,
     });
   }
 };
+
 
 const acknowledgeConsent = (req, res) => {
   res.cookie("cookie_consent", "accepted", {
