@@ -7,7 +7,7 @@ const {CreateUser, loginUser, getsingleUser, getAllUsers, updateUser, deleteUser
 
 router.post("/register-User", upload.single('avatar'), CreateUser);
 router.post("/user-login", loginUser);
-router.post("/reconsent", acknowledgeConsent);
+router.post("/consent", acknowledgeConsent);
 router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updateUser);
 router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
