@@ -149,6 +149,37 @@ const loginUser = async (req, res) => {
   }
 };
 
+// Refresh or re-send cookies after user consents
+const reconsent = async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    const userCookie = req.cookies.user;
+
+    if (!token || !userCookie) {
+      return res.status(400).json({ success: false, message: "Missing cookies" });
+    }
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.cookie("user", userCookie, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({ success: true, message: "Consent acknowledged. Cookies re-set." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Consent handling failed", error: err.message });
+  }
+};
+
+
 // Get all users (excluding password & version field)
 const getAllUsers = async (req, res) => {
   const { page = 1, limit = 9, location, ethnicity, age, gender, maritalStatus, height, weight,  } = req.query;
@@ -404,6 +435,7 @@ module.exports = {
   resetPassword,
   requestPasswordReset,
   updateUser,
+  reconsent,
   deleteUser,
   logoutUser,
 };

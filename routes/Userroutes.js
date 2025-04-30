@@ -3,10 +3,11 @@ const router = express.Router();
 const upload = require("../middleware/Fileuploads")
 const authenticateToken = require('../middleware/Auth');
 
-const {CreateUser, loginUser, getsingleUser, getAllUsers, updateUser, deleteUser, requestPasswordReset, resetPassword,} = require("../controllers/UserController")
+const {CreateUser, loginUser, getsingleUser, getAllUsers, updateUser, deleteUser, requestPasswordReset, resetPassword, reconsent} = require("../controllers/UserController")
 
 router.post("/register-User", upload.single('avatar'), CreateUser);
 router.post("/user-login", loginUser);
+router.post("/api/reconsent", reconsent);
 router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updateUser);
 router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
