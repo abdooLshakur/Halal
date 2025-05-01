@@ -106,7 +106,7 @@ const loginUser = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, isAuthenticated: user.isAuthenticated === "true" },
       process.env.SECRET_KEY,
-      { expiresIn: "7d" }
+      { expiresIn: "2d" }
     );
 
     // Cookie settings
@@ -114,7 +114,7 @@ const loginUser = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 2 * 24 * 60 * 60 * 1000, 
     };
 
     // Set secure token cookie
@@ -131,7 +131,7 @@ const loginUser = async (req, res) => {
     // Set secure user info cookie
     res.cookie("user", JSON.stringify(safeUser), {
       ...cookieOptions,
-      httpOnly: false, // Set to false if frontend JS (js-cookie) needs to read it
+      httpOnly: true, 
     });
 
     // Send response

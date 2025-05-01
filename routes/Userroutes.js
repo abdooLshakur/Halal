@@ -13,15 +13,6 @@ router.post("/request-password-reset", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 router.get('/users', getAllUsers);
 router.get('/user/:id',  getsingleUser);
-router.get("/test-cookies", (req, res) => {
-    console.log("Cookies received:", req.cookies);
-  
-    res.json({
-      success: true,
-      message: "Cookies received on server",
-      cookies: req.cookies,
-    });
-  });
   
 router.delete('/delete-user', authenticateToken, deleteUser);
 
