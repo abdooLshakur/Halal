@@ -95,55 +95,53 @@ const loginUser = async (req, res) => {
     const user = await Users.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res.json({ success: false, message: "User not found" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: "Invalid password" });
+      return res.json({ success: false, message: "Invalid password" });
     }
 
     const token = jwt.sign(
       { id: user._id, isAuthenticated: user.isAuthenticated === "true" },
       process.env.SECRET_KEY,
-      { expiresIn: "2d" }
+      { expiresIn: '7d' }
     );
+    
 
-    // Cookie settings
-    const cookieOptions = {
+
+    // Set token cookie
+    res.cookie("token", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      maxAge: 2 * 24 * 60 * 60 * 1000, 
-    };
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
-    // Set secure token cookie
-    res.cookie("token", token, cookieOptions);
-
-    // Prepare safe user data
+    // Set user cookie with basic user info
     const safeUser = {
       id: user._id,
-      name: `${user.first_name} ${user.last_name}`,
+      name: user.first_name + " " +   user.last_name,
       email: user.email,
       avatar: user.avatar,
     };
-
-    // Set secure user info cookie
+    
     res.cookie("user", JSON.stringify(safeUser), {
-      ...cookieOptions,
-      httpOnly: true, 
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-
-    // Send response
-    res.status(200).json({
+    
+    res.json({
       success: true,
       message: "Login successful",
       data: safeUser,
     });
 
   } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({
+    res.json({
       success: false,
       message: "Login failed",
       error: err.message,
@@ -151,22 +149,9 @@ const loginUser = async (req, res) => {
   }
 };
 
-
-const acknowledgeConsent = (req, res) => {
-  res.cookie("cookie_consent", "accepted", {
-    sameSite: "none",      
-    secure: true,          
-    httpOnly: true,        
-    maxAge: 365 * 24 * 60 * 60 * 1000,
-  });
-
-  res.status(200).json({ success: true, message: "Consent acknowledged" });
-};
-
-
 // Get all users (excluding password & version field)
 const getAllUsers = async (req, res) => {
-  const { page = 1, limit = 9, location, ethnicity, age, gender, maritalStatus, height, weight, } = req.query;
+  const { page = 1, limit = 9, location, ethnicity, age, gender, maritalStatus, height, weight,  } = req.query;
 
   const filters = {};
   if (location) filters.location = location;
@@ -334,7 +319,7 @@ const requestPasswordReset = async (req, res) => {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+     await transporter.sendMail(mailOptions);
 
     res.status(200).json({
       message: "Reset link sent to your email",
@@ -419,7 +404,6 @@ module.exports = {
   resetPassword,
   requestPasswordReset,
   updateUser,
-  acknowledgeConsent,
   deleteUser,
   logoutUser,
 };
