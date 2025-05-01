@@ -11,7 +11,7 @@ const Intresetroutes = require("./routes/Interestroutes");
 const notification = require('./routes/Ntificationroutes');
 
 const app = express();
-const port = process.env.PORT || 7000;
+const port = process.env.PORT;
 const SECRET_KEY = process.env.SECRET_KEY;
 const dbUrl = process.env.DB_URL;
 
