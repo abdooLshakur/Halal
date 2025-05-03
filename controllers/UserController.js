@@ -41,7 +41,7 @@ const CreateUser = async (req, res) => {
       });
     }
 
-    const avatar = req.file ? req.file.path : "/placeholder.jpg";
+    const avatar = req.file ? req.file.path : null;
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const newUser = new Users({
@@ -113,7 +113,7 @@ const loginUser = async (req, res) => {
 
     // Set token cookie
     res.cookie("token", token, {
-      httpOnly: true,
+      httpOnly: false,
       secure: true, 
       sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -130,7 +130,7 @@ const loginUser = async (req, res) => {
     };
 
     res.cookie("user", JSON.stringify(safeUser), {
-      httpOnly: true,
+      httpOnly: false,
       secure: true,
       sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -310,7 +310,7 @@ const requestPasswordReset = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    const resetLink = `http://localhost:3000/reset-password?token=${token}&email=${email}`;
+    const resetLink = `https://halalmatch.vercel.app/reset-password?token=${token}&email=${email}`;
 
     // Email setup
     const transporter = nodemailer.createTransport({
@@ -322,7 +322,7 @@ const requestPasswordReset = async (req, res) => {
     });
 
     const mailOptions = {
-      from: `"My App" <${process.env.EMAIL_USER}>`,
+      from: `"Halal Matchmaking" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Password Reset",
       html: `
@@ -380,6 +380,49 @@ const resetPassword = async (req, res) => {
 };
 
 
+const contactUs = async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+
+    // Validate input
+    if (!name || !email || !message) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    // Setup mail transporter
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, // Your app email
+        pass: process.env.EMAIL_PASS, // App password
+      },
+    });
+
+    // Mail content
+    const mailOptions = {
+      from: `"${name}" <${email}>`,         // User-sent
+      to: process.env.EMAIL_USER,           // Your receiving inbox
+      subject: "New Message",
+      html: `
+        <h2>Contact Form Message</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
+      `,
+    };
+
+    // Send the mail
+    await transporter.sendMail(mailOptions);
+
+    return res.status(200).json({ message: "Message sent successfully." });
+  } catch (error) {
+    console.error("Error in contactUs:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+
 // Logout user — clear cookies
 const logoutUser = (req, res) => {
   res.clearCookie("token");
@@ -418,6 +461,7 @@ module.exports = {
   resetPassword,
   requestPasswordReset,
   updateUser,
+  contactUs,
   acknowledgeConsent,
   deleteUser,
   logoutUser,

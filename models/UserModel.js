@@ -26,8 +26,7 @@ const UserSchema = new Schema({
   dealBreakers: { type: String },
   physicalChallenges: { type: String },
   bio: { type: String },
-  avatar: { type: String, default: '', }, // Initially hidden
-  isProfilePictureApproved: { type: Boolean, default: false }, // Admin approval
+  avatar: { type: String, default: '', }, 
   approvedViewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who can view after approval
   isAuthenticated: { type: Boolean, default: false },
   resetPasswordToken: { type: String },
