@@ -44,7 +44,7 @@ app.use(Intresetroutes);
 app.use(Imagerequest);
 app.use(notification);
 
-const buildPath = path.join(__dirname, "https://halalmatch.vercel.app/build");
+const buildPath = path.join(__dirname, "../finalhalal/build");
 app.use(express.static(buildPath));
 
 app.get("*", (req, res) => {
