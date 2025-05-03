@@ -113,7 +113,7 @@ const loginUser = async (req, res) => {
 
     // Set token cookie
     res.cookie("token", token, {
-      httpOnly: false,
+      httpOnly: true,
       secure: true, 
       sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -130,7 +130,7 @@ const loginUser = async (req, res) => {
     };
 
     res.cookie("user", JSON.stringify(safeUser), {
-      httpOnly: false,
+      httpOnly: true,
       secure: true,
       sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -161,7 +161,6 @@ const acknowledgeConsent = (req, res) => {
 
   res.status(200).json({ success: true, message: "Consent acknowledged" });
 };
-
 
 // Get all users (excluding password & version field)
 const getAllUsers = async (req, res) => {
@@ -378,7 +377,6 @@ const resetPassword = async (req, res) => {
     res.status(400).json({ message: "Invalid or expired token" });
   }
 };
-
 
 const contactUs = async (req, res) => {
   try {
