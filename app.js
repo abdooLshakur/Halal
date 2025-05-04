@@ -21,19 +21,19 @@ if (!dbUrl || !SECRET_KEY) {
 }
 
 // Middleware
+const allowedOrigins = [
+  "https://zmhcollections.online",
+  "https://www.zmhcollections.online",
+];
+
 app.use(cors({
-  origin: (origin, callback) => {
-    const allowedOrigins = [
-      'https://halalmatch.vercel.app',
-      'https://zmhcollections.online',
-      'https://www.zmhcollections.online',
-    ];
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true); // Allow access
-    } else {
-      callback(new Error('Not allowed by CORS')); // Deny access
-    }
-  },
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
+// Handle preflight requests
+app.options('*', cors({
+  origin: allowedOrigins,
   credentials: true,
 }));
 
