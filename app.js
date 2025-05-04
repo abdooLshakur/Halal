@@ -56,14 +56,6 @@ app.use(Intresetroutes);
 app.use(Imagerequest);
 app.use(notification);
 
-const buildPath = path.join(__dirname, "../finalhalal/build");
-app.use(express.static(buildPath));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(buildPath, "index.html"));
-});
-
-
 
 // Start server
 app.listen(port, () => {
