@@ -22,11 +22,21 @@ if (!dbUrl || !SECRET_KEY) {
 
 // Middleware
 app.use(cors({
-  origin: 'https://halalmatch.vercel.app',
-  origin: 'https://zmhcollections.online',
-  origin: 'https://www.zmhcollections.online',
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      'https://halalmatch.vercel.app',
+      'https://zmhcollections.online',
+      'https://www.zmhcollections.online',
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true); // Allow access
+    } else {
+      callback(new Error('Not allowed by CORS')); // Deny access
+    }
+  },
   credentials: true,
 }));
+
 app.use(cookieParser());
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
