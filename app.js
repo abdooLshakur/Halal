@@ -23,6 +23,8 @@ if (!dbUrl || !SECRET_KEY) {
 // Middleware
 app.use(cors({
   origin: 'https://halalmatch.vercel.app',
+  origin: 'https://zmhcollections.online',
+  origin: 'https://www.zmhcollections.online',
   credentials: true,
 }));
 app.use(cookieParser());
