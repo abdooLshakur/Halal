@@ -105,7 +105,7 @@ const updateNotificationStatus = async (req, res) => {
       return res.status(404).json({ message: 'Notification not found or unauthorized.' });
     }
 
-    // Perform action (only recipient can accept/reject, sender can delete)
+    // Perform action (only recipient can accept/reject,)
     if (action === 'accepted' || action === 'rejected') {
       if (notification.recipient.toString() !== req.user._id.toString()) {
         return res.status(403).json({ message: 'You are not authorized to respond to this notification.' });
