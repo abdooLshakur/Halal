@@ -9,6 +9,7 @@ const UserRoutes = require("./routes/Userroutes");
 const Imagerequest = require("./routes/Imagerequest");
 const Intresetroutes = require("./routes/Interestroutes");
 const notification = require('./routes/Ntificationroutes');
+const MatchRoute = require('./routes/MacthRoute');
 
 const app = express();
 const port = process.env.PORT;
@@ -55,6 +56,7 @@ app.use(UserRoutes);
 app.use(Intresetroutes);
 app.use(Imagerequest);
 app.use(notification);
+app.use(MatchRoute);
 
 
 // Start server

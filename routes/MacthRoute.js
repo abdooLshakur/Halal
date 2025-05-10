@@ -6,7 +6,7 @@ const {
   autoCreateMatch,
   shareContactInfo,
   getAllMatches
-} = require('../controllers/match.controller');
+} = require('../controllers/MatchController');
 
 router.post('/matches/auto-create', authenticateToken, autoCreateMatch);
 router.get('/matches', authenticateToken, getAllMatches);
