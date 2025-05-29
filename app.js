@@ -10,7 +10,9 @@ const Imagerequest = require("./routes/Imagerequest");
 const Intresetroutes = require("./routes/Interestroutes");
 const notification = require('./routes/Ntificationroutes');
 const MatchRoute = require('./routes/MacthRoute');
-
+const AdminRoute = require('./routes/Adminroutes');
+const Galleryroutes = require('./routes/Galleryroutes');
+const paymentRoutes = require('./routes/PaymentRoutes');
 const app = express();
 const port = process.env.PORT;
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -25,6 +27,7 @@ if (!dbUrl || !SECRET_KEY) {
 const allowedOrigins = [
   "https://zmhcollections.online",
   "https://www.zmhcollections.online",
+  "http://localhost:3000",
 ];
 
 app.use(cors({
@@ -52,11 +55,15 @@ mongoose.connect(dbUrl)
 app.get("/", (req, res) => {
   res.send("Welcome to Halal Match Making API");
 });
+app.use(AdminRoute);
 app.use(UserRoutes);
 app.use(Intresetroutes);
 app.use(Imagerequest);
 app.use(notification);
 app.use(MatchRoute);
+app.use(Galleryroutes);
+app.use(paymentRoutes);
+
 
 
 // Start server

@@ -27,8 +27,9 @@ const UserSchema = new Schema({
   physicalChallenges: { type: String },
   bio: { type: String },
   avatar: { type: String, default: '', }, 
-  approvedViewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who can view after approval
+  approvedViewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], 
   isAuthenticated: { type: Boolean, default: false },
+  isVerified: { type: Boolean, default: false },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
   createdAt: { type: Date, default: Date.now }

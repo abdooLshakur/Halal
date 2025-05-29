@@ -1,10 +1,10 @@
 const bcrypt = require("bcryptjs");
-const Users = require("../models/UserModel");
+const Admins = require("../models/AdminModel");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 
-// Create a new user
-const CreateUser = async (req, res) => {
+// Create a new Admin
+const CreateAdmin = async (req, res) => {
   try {
     const {
       first_name,
@@ -33,8 +33,8 @@ const CreateUser = async (req, res) => {
       bio
     } = req.body;
 
-    const existingUser = await Users.findOne({ email });
-    if (existingUser) {
+    const existingAdmin = await Admins.findOne({ email });
+    if (existingAdmin) {
       return res.json({
         success: false,
         message: "Email already exists",
@@ -44,7 +44,7 @@ const CreateUser = async (req, res) => {
     const avatar = req.file ? req.file.path : null;
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const newUser = new Users({
+    const newAdmin = new Admins({
       first_name,
       last_name,
       email,
@@ -72,12 +72,12 @@ const CreateUser = async (req, res) => {
       bio,
     });
 
-    const savedUser = await newUser.save();
+    const savedAdmin = await newAdmin.save();
 
     res.json({
       success: true,
-      message: "User registered successfully",
-      data: savedUser,
+      message: "Admin registered successfully",
+      data: savedAdmin,
     });
   } catch (err) {
     res.json({
@@ -88,38 +88,38 @@ const CreateUser = async (req, res) => {
   }
 };
 
-// Login user
-const loginUser = async (req, res) => {
+// Login Admin
+const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await Users.findOne({ email });
+    const Admin = await Admins.findOne({ email });
 
-    if (!user) {
-      return res.json({ success: false, message: "User not found" });
+    if (!Admin) {
+      return res.json({ success: false, message: "Admin not found" });
     }
-    if (user.isVerified === false) {
-      return res.json({ success: false, message: "User not verified" });
+    if (Admin.isverified === false) {
+      return res.json({ success: false, message: "Admin not verified" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, Admin.password);
     if (!isMatch) {
       return res.json({ success: false, message: "Invalid password" });
     }
 
     const token = jwt.sign(
-      { id: user._id, isAuthenticated: user.isAuthenticated === "true" },
+      { id: Admin._id, isAuthenticated: Admin.isAuthenticated === "true" },
       process.env.SECRET_KEY,
       { expiresIn: '7d' }
     );
 
 
 
-    // Set user cookie with basic user info
-    const safeUser = {
-      id: user._id,
-      name: user.first_name + " " + user.last_name,
-      email: user.email,
-      avatar: user.avatar,
+    // Set Admin cookie with basic Admin info
+    const safeAdmin = {
+      id: Admin._id,
+      name: Admin.first_name + " " + Admin.last_name,
+      email: Admin.email,
+      avatar: Admin.avatar,
     };
 
     // // Set token cookie
@@ -131,8 +131,8 @@ const loginUser = async (req, res) => {
     //   maxAge: 7 * 24 * 60 * 60 * 1000,
     // });
 
-    // // Set user cookie
-    // res.cookie("user", JSON.stringify(safeUser), {
+    // // Set Admin cookie
+    // res.cookie("Admin", JSON.stringify(safeAdmin), {
     //   httpOnly: true,
     //   secure: true,
     //   sameSite: "None",
@@ -150,7 +150,7 @@ const loginUser = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, 
     });
 
-    res.cookie("user", JSON.stringify(safeUser), {
+    res.cookie("Admin", JSON.stringify(safeAdmin), {
       httpOnly: false,
       secure: isProduction,
       sameSite: isProduction ? "None" : "Lax",
@@ -160,7 +160,7 @@ const loginUser = async (req, res) => {
     res.json({
       success: true,
       message: "Login successful",
-      data: safeUser,
+      data: safeAdmin,
     });
 
   } catch (err) {
@@ -183,8 +183,8 @@ const acknowledgeConsent = (req, res) => {
   res.status(200).json({ success: true, message: "Consent acknowledged" });
 };
 
-// Get all users (excluding password & version field)
-const getAllUsers = async (req, res) => {
+// Get all Admins (excluding password & version field)
+const getAllAdmins = async (req, res) => {
   const { page = 1, limit = 9, location, ethnicity, age, gender, maritalStatus, height, weight, } = req.query;
 
   const filters = {};
@@ -196,50 +196,50 @@ const getAllUsers = async (req, res) => {
   if (weight) filters.weight = { $lte: Number(weight) };
 
   try {
-    const totalUsers = await Users.countDocuments(filters);
-    const totalPages = Math.ceil(totalUsers / limit);
+    const totalAdmins = await Admins.countDocuments(filters);
+    const totalPages = Math.ceil(totalAdmins / limit);
 
-    const users = await Users.find(filters)
+    const Admins = await Admins.find(filters)
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .select("-password -__v");
 
     res.json({
       success: true,
-      data: users,
+      data: Admins,
       totalPages,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to fetch users", error: err.message });
+    res.status(500).json({ success: false, message: "Failed to fetch Admins", error: err.message });
   }
 };
 
-// Get single user by ID
-const getsingleUser = (req, res) => {
+// Get single Admin by ID
+const getsingleAdmin = (req, res) => {
   const id = req.params.id;
 
-  Users.findById(id, { password: 0, __v: 0 })
-    .then((user) => {
-      if (!user) {
-        return res.json({ success: false, message: "User not found" });
+  Admins.findById(id, { password: 0, __v: 0 })
+    .then((Admin) => {
+      if (!Admin) {
+        return res.json({ success: false, message: "Admin not found" });
       }
       res.json({
         success: true,
-        message: "User found",
-        data: user,
+        message: "Admin found",
+        data: Admin,
       });
     })
     .catch((err) => {
       res.json({
         success: false,
-        message: "Failed to fetch user",
+        message: "Failed to fetch Admin",
         error: err.message,
       });
     });
 };
 
-// Update user info
-const updateUser = async (req, res) => {
+// Update Admin info
+const updateAdmin = async (req, res) => {
   try {
     const id = req.params.id;
     const avatarpath = req.file ? req.file.path : undefined;
@@ -270,26 +270,26 @@ const updateUser = async (req, res) => {
       updatedFields.avatar = avatarpath;
     }
 
-    // Update user
-    const updatedUser = await Users.findByIdAndUpdate(
+    // Update Admin
+    const updatedAdmin = await Admins.findByIdAndUpdate(
       id,
       { $set: updatedFields },
       { new: true }
     );
 
-    if (!updatedUser) {
-      return res.status(404).json({ success: false, message: "User not found" });
+    if (!updatedAdmin) {
+      return res.status(404).json({ success: false, message: "Admin not found" });
     }
 
-    // Build cookie content using updatedUser data
-    const userCookieData = {
-      id: updatedUser._id,
-      name: `${updatedUser.first_name} ${updatedUser.last_name}`,
-      avatar: updatedUser.avatar,
+    // Build cookie content using updatedAdmin data
+    const AdminCookieData = {
+      id: updatedAdmin._id,
+      name: `${updatedAdmin.first_name} ${updatedAdmin.last_name}`,
+      avatar: updatedAdmin.avatar,
     };
 
     // Set cookie
-    res.cookie("user", JSON.stringify(userCookieData), {
+    res.cookie("Admin", JSON.stringify(AdminCookieData), {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -298,68 +298,37 @@ const updateUser = async (req, res) => {
 
     res.json({
       success: true,
-      message: "User profile updated successfully",
+      message: "Admin profile updated successfully",
     });
   } catch (err) {
     console.error("Update error:", err);
     res.status(500).json({
       success: false,
-      message: "Failed to update user",
+      message: "Failed to update Admin",
       error: err.message,
     });
   }
 };
-const verifyUser = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { isVerified } = req.body;
-
-    // Ensure a boolean value was passed
-    if (typeof isVerified !== 'boolean') {
-      return res.status(400).json({ message: 'isVerified must be a boolean' });
-    }
-
-    const user = await Users.findByIdAndUpdate(
-      userId,
-      { isVerified },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json({
-      message: `User ${isVerified ? 'activated' : 'disabled'} successfully`,
-      user
-    });
-  } catch (err) {
-    console.error("Server error verifying user:", err);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-
 
 // Request Reset Controller
 const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
 
-    const user = await Users.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    const Admin = await Admins.findOne({ email });
+    if (!Admin) {
+      return res.status(404).json({ message: "Admin not found" });
     }
 
     const token = jwt.sign(
-      { id: user._id },
+      { id: Admin._id },
       process.env.SECRET_KEY,
       { expiresIn: "1h" }
     );
 
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
-    await user.save();
+    Admin.resetPasswordToken = token;
+    Admin.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    await Admin.save();
 
     const resetLink = `https://halalmatch.vercel.app/reset-password?token=${token}&email=${email}`;
 
@@ -367,17 +336,17 @@ const requestPasswordReset = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER,
+        Admin: process.env.EMAIL_Admin,
         pass: process.env.EMAIL_PASS,
       },
     });
 
     const mailOptions = {
-      from: `"Halal Matchmaking" <${process.env.EMAIL_USER}>`,
+      from: `"Halal Matchmaking" <${process.env.EMAIL_Admin}>`,
       to: email,
       subject: "Password Reset",
       html: `
-        <p>Hi ${user.first_name},</p>
+        <p>Hi ${Admin.first_name},</p>
         <p>You requested to reset your password. Click the link below to reset it:</p>
         <a href="${resetLink}">Reset Password</a>
         <p>This link will expire in 1 hour.</p>
@@ -405,20 +374,20 @@ const resetPassword = async (req, res) => {
     // Correct the reference to the environment variable
     const decoded = jwt.verify(token, process.env.SECRET_KEY); // Will throw if invalid/expired
 
-    // Find the user by decoded ID and email
-    const user = await Users.findOne({ _id: decoded.id, email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    // Find the Admin by decoded ID and email
+    const Admin = await Admins.findOne({ _id: decoded.id, email });
+    if (!Admin) return res.status(404).json({ message: "Admin not found" });
 
     // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
+    Admin.password = hashedPassword;
 
     // Remove the reset token and expiration date
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    Admin.resetPasswordToken = undefined;
+    Admin.resetPasswordExpires = undefined;
 
-    // Save the updated user
-    await user.save();
+    // Save the updated Admin
+    await Admin.save();
 
     res.status(200).json({ message: "Password has been reset" });
   } catch (error) {
@@ -443,15 +412,15 @@ const contactUs = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER, // Your app email
+        Admin: process.env.EMAIL_Admin, // Your app email
         pass: process.env.EMAIL_PASS, // App password
       },
     });
 
     // Mail content
     const mailOptions = {
-      from: `"${name}" <${email}>`,         // User-sent
-      to: process.env.EMAIL_USER,           // Your receiving inbox
+      from: `"${name}" <${email}>`,         // Admin-sent
+      to: process.env.EMAIL_Admin,           // Your receiving inbox
       subject: "New Message",
       html: `
         <h2>Contact Form Message</h2>
@@ -473,47 +442,46 @@ const contactUs = async (req, res) => {
 };
 
 
-// Logout user — clear cookies
-const logoutUser = (req, res) => {
+// Logout Admin — clear cookies
+const logoutAdmin = (req, res) => {
   res.clearCookie("token");
-  res.clearCookie("userAvatar");
+  res.clearCookie("AdminAvatar");
   res.json({
     success: true,
     message: "Logged out successfully",
   });
 };
 
-// Delete user by ID
-const deleteUser = (req, res) => {
+// Delete Admin by ID
+const deleteAdmin = (req, res) => {
   const id = req.params.id;
 
-  Users.findByIdAndDelete(id)
+  Admins.findByIdAndDelete(id)
     .then(() => {
       res.json({
         success: true,
-        message: "User deleted successfully",
+        message: "Admin deleted successfully",
       });
     })
     .catch((err) => {
       res.json({
         success: false,
-        message: "Failed to delete user",
+        message: "Failed to delete Admin",
         error: err.message,
       });
     });
 };
 
 module.exports = {
-  CreateUser,
-  loginUser,
-  getAllUsers,
-  getsingleUser,
+  CreateAdmin,
+  loginAdmin,
+  getAllAdmins,
+  getsingleAdmin,
   resetPassword,
   requestPasswordReset,
-  updateUser,
+  updateAdmin,
   contactUs,
-  verifyUser,
   acknowledgeConsent,
-  deleteUser,
-  logoutUser,
+  deleteAdmin,
+  logoutAdmin,
 };
