@@ -122,38 +122,21 @@ const loginUser = async (req, res) => {
       avatar: user.avatar,
     };
 
-    // // Set token cookie
-    // res.cookie("token", token, {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: "None",
-    //   domain: ".zmhcollections.online",  // ✅ Add this
-    //   maxAge: 7 * 24 * 60 * 60 * 1000,
-    // });
-
-    // // Set user cookie
-    // res.cookie("user", JSON.stringify(safeUser), {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: "None",
-    //   domain: ".zmhcollections.online",  // ✅ Add this
-    //   maxAge: 7 * 24 * 60 * 60 * 1000,
-    // });
-
-
-    const isProduction = process.env.NODE_ENV === "production";
-
+    // Set token cookie
     res.cookie("token", token, {
-      httpOnly: false,
-      secure: isProduction, 
-      sameSite: isProduction ? "None" : "Lax", 
-      maxAge: 7 * 24 * 60 * 60 * 1000, 
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      domain: ".halalmatchmakings.com",  // ✅ Add this
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    // Set user cookie
     res.cookie("user", JSON.stringify(safeUser), {
-      httpOnly: false,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      domain: ".halalmatchmakings.com",  // ✅ Add this
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

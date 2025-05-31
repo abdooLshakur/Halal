@@ -122,40 +122,24 @@ const loginAdmin = async (req, res) => {
       avatar: Admin.avatar,
     };
 
-    // // Set token cookie
-    // res.cookie("token", token, {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: "None",
-    //   domain: ".zmhcollections.online",  // ✅ Add this
-    //   maxAge: 7 * 24 * 60 * 60 * 1000,
-    // });
-
-    // // Set Admin cookie
-    // res.cookie("Admin", JSON.stringify(safeAdmin), {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: "None",
-    //   domain: ".zmhcollections.online",  // ✅ Add this
-    //   maxAge: 7 * 24 * 60 * 60 * 1000,
-    // });
-
-
-    const isProduction = process.env.NODE_ENV === "production";
-
+    // Set token cookie
     res.cookie("token", token, {
-      httpOnly: false,
-      secure: isProduction, 
-      sameSite: isProduction ? "None" : "Lax", 
-      maxAge: 7 * 24 * 60 * 60 * 1000, 
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      domain: ".halalmatchmakings.com",  
+      maxAge: 4 * 60 * 60 * 1000, 
     });
 
+    // Set Admin cookie
     res.cookie("Admin", JSON.stringify(safeAdmin), {
-      httpOnly: false,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      domain: ".halalmatchmakings.com",  
+      maxAge: 4 * 60 * 60 * 1000, 
     });
+
 
     res.json({
       success: true,

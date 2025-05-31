@@ -25,8 +25,8 @@ if (!dbUrl || !SECRET_KEY) {
 
 // Middleware
 const allowedOrigins = [
-  "https://zmhcollections.online",
-  "https://www.zmhcollections.online",
+  "https://www.halalmatchmakings.com/",
+  "https://halalmatchmakings.com/",
   "http://localhost:3000",
 ];
 
