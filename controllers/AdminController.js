@@ -97,7 +97,7 @@ const loginAdmin = async (req, res) => {
     if (!Admin) {
       return res.json({ success: false, message: "Admin not found" });
     }
-    if (Admin.isverified === false) {
+    if (Admin.isVerified === false) {
       return res.json({ success: false, message: "Admin not verified" });
     }
 
@@ -109,7 +109,7 @@ const loginAdmin = async (req, res) => {
     const token = jwt.sign(
       { id: Admin._id, isAuthenticated: Admin.isAuthenticated === "true" },
       process.env.SECRET_KEY,
-      { expiresIn: '7d' }
+      { expiresIn: '4h' }
     );
 
 

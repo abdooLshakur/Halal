@@ -28,7 +28,7 @@ const AdminSchema = new Schema({
   bio: { type: String },
   avatar: { type: String, default: '', }, 
   isAuthenticated: { type: Boolean, default: false },
-  isverified: { type: Boolean, default: false },
+  isVerified: { type: Boolean, default: false },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
   createdAt: { type: Date, default: Date.now }
