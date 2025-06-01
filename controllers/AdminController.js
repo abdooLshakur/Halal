@@ -198,6 +198,36 @@ const getAllAdmins = async (req, res) => {
   }
 };
 
+const verifyAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isVerified } = req.body;
+
+    // Ensure a boolean value was passed
+    if (typeof isVerified !== 'boolean') {
+      return res.status(400).json({ message: 'isVerified must be a boolean' });
+    }
+
+    const user = await Admins.findByIdAndUpdate(
+      userId,
+      { isVerified },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      message: `User ${isVerified ? 'activated' : 'disabled'} successfully`,
+      user
+    });
+  } catch (err) {
+    console.error("Server error verifying user:", err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Get single Admin by ID
 const getsingleAdmin = (req, res) => {
   const id = req.params.id;
@@ -314,7 +344,7 @@ const requestPasswordReset = async (req, res) => {
     Admin.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await Admin.save();
 
-    const resetLink = `https://halalmatch.vercel.app/reset-password?token=${token}&email=${email}`;
+    const resetLink = `https://www.halalmatchmakings.com/reset-password?token=${token}&email=${email}`;
 
     // Email setup
     const transporter = nodemailer.createTransport({
@@ -383,53 +413,14 @@ const resetPassword = async (req, res) => {
   }
 };
 
-const contactUs = async (req, res) => {
-  try {
-    const { name, email, message } = req.body;
 
-    // Validate input
-    if (!name || !email || !message) {
-      return res.status(400).json({ message: "All fields are required." });
-    }
-
-    // Setup mail transporter
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        Admin: process.env.EMAIL_Admin, // Your app email
-        pass: process.env.EMAIL_PASS, // App password
-      },
-    });
-
-    // Mail content
-    const mailOptions = {
-      from: `"${name}" <${email}>`,         // Admin-sent
-      to: process.env.EMAIL_Admin,           // Your receiving inbox
-      subject: "New Message",
-      html: `
-        <h2>Contact Form Message</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Message:</strong></p>
-        <p>${message}</p>
-      `,
-    };
-
-    // Send the mail
-    await transporter.sendMail(mailOptions);
-
-    return res.status(200).json({ message: "Message sent successfully." });
-  } catch (error) {
-    console.error("Error in contactUs:", error);
-    return res.status(500).json({ message: "Internal server error." });
-  }
-};
 
 
 // Logout Admin — clear cookies
 const logoutAdmin = (req, res) => {
   res.clearCookie("token");
   res.clearCookie("AdminAvatar");
+  res.clearCookie("Adminr");
   res.json({
     success: true,
     message: "Logged out successfully",
@@ -464,7 +455,7 @@ module.exports = {
   resetPassword,
   requestPasswordReset,
   updateAdmin,
-  contactUs,
+  verifyAdmin,
   acknowledgeConsent,
   deleteAdmin,
   logoutAdmin,
