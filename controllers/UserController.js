@@ -322,8 +322,6 @@ const verifyUser = async (req, res) => {
   }
 };
 
-
-
 // Request Reset Controller
 const requestPasswordReset = async (req, res) => {
   try {

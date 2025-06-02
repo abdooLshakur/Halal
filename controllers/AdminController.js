@@ -169,13 +169,12 @@ const acknowledgeConsent = (req, res) => {
 
 // Get all Admins (excluding password & version field)
 const getAllAdmins = async (req, res) => {
-  const { page = 1, limit = 9, location, ethnicity, age, gender, maritalStatus, height, weight, } = req.query;
+  const { page = 1, limit = 9, location, ethnicity, age, gender,  height, weight, } = req.query;
 
   const filters = {};
   if (location) filters.location = location;
   if (ethnicity) filters.ethnicity = ethnicity;
   if (gender) filters.gender = gender;
-  if (maritalStatus) filters.maritalStatus = maritalStatus;
   if (height) filters.height = { $lte: Number(height) };
   if (weight) filters.weight = { $lte: Number(weight) };
 
@@ -183,14 +182,14 @@ const getAllAdmins = async (req, res) => {
     const totalAdmins = await Admins.countDocuments(filters);
     const totalPages = Math.ceil(totalAdmins / limit);
 
-    const Admins = await Admins.find(filters)
+    const Admin = await Admins.find(filters)
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .select("-password -__v");
 
     res.json({
       success: true,
-      data: Admins,
+      data: Admin,
       totalPages,
     });
   } catch (err) {
