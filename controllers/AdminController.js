@@ -13,24 +13,8 @@ const CreateAdmin = async (req, res) => {
       password,
       age,
       gender,
+      phone,
       location,
-      stateOfOrigin,
-      ethnicity,
-      maritalStatus,
-      numberOfKids,
-      height,
-      weight,
-      genotype,
-      bloodGroup,
-      complexion,
-      qualification,
-      profession,
-      hobbies,
-      religiousLevel,
-      spouseQualities,
-      dealBreakers,
-      physicalChallenges,
-      bio
     } = req.body;
 
     const existingAdmin = await Admins.findOne({ email });
@@ -169,14 +153,11 @@ const acknowledgeConsent = (req, res) => {
 
 // Get all Admins (excluding password & version field)
 const getAllAdmins = async (req, res) => {
-  const { page = 1, limit = 9, location, ethnicity, age, gender,  height, weight, } = req.query;
+  const { page = 1, limit = 9, location,  age, gender, } = req.query;
 
   const filters = {};
   if (location) filters.location = location;
-  if (ethnicity) filters.ethnicity = ethnicity;
   if (gender) filters.gender = gender;
-  if (height) filters.height = { $lte: Number(height) };
-  if (weight) filters.weight = { $lte: Number(weight) };
 
   try {
     const totalAdmins = await Admins.countDocuments(filters);
@@ -411,8 +392,6 @@ const resetPassword = async (req, res) => {
     res.status(400).json({ message: "Invalid or expired token" });
   }
 };
-
-
 
 
 // Logout Admin — clear cookies

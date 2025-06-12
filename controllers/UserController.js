@@ -128,16 +128,16 @@ const loginUser = async (req, res) => {
       secure: true,
       sameSite: "None",
       domain: ".halalmatchmakings.com",  // ✅ Add this
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 2 * 24 * 60 * 60 * 1000,
     });
 
     // Set user cookie
     res.cookie("user", JSON.stringify(safeUser), {
-      httpOnly: true,
+      httpOnly: false,
       secure: true,
       sameSite: "None",
       domain: ".halalmatchmakings.com",  // ✅ Add this
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 2 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
