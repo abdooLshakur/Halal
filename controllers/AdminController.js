@@ -89,21 +89,16 @@ const loginAdmin = async (req, res) => {
       avatar: Admin.avatar,
     };
 
-    res.cookie("token", token, {
+    const cookieConfig = {
       httpOnly: true,
       secure: true,
       sameSite: "None",
-      domain: ".halalmatchmakings.com",
+      domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com",
       maxAge: 4 * 60 * 60 * 1000,
-    });
+    };
 
-    res.cookie("Admin", JSON.stringify(safeAdmin), {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      domain: ".halalmatchmakings.com",
-      maxAge: 4 * 60 * 60 * 1000,
-    });
+    res.cookie("token", token, cookieConfig);
+    res.cookie("Admin", JSON.stringify(safeAdmin), cookieConfig);
 
     res.json({
       success: true,
@@ -126,6 +121,7 @@ const acknowledgeConsent = (req, res) => {
     secure: true,
     httpOnly: true,
     maxAge: 365 * 24 * 60 * 60 * 1000,
+    domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com",
   });
   res.status(200).json({ success: true, message: "Consent acknowledged" });
 };
@@ -198,6 +194,7 @@ const updateAdmin = async (req, res) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com",
     });
 
     res.json({ success: true, message: "Admin profile updated successfully" });
@@ -302,8 +299,8 @@ const verifyAdmin = async (req, res) => {
 };
 
 const logoutAdmin = (req, res) => {
-  res.clearCookie("token");
-  res.clearCookie("Admin");
+  res.clearCookie("token", { domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com" });
+  res.clearCookie("Admin", { domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com" });
   res.json({ success: true, message: "Logged out successfully" });
 };
 
