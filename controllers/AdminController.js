@@ -10,11 +10,12 @@ const CreateAdmin = async (req, res) => {
       first_name,
       last_name,
       email,
+      phone,
       password,
       age,
       gender,
-      phone,
       location,
+      stateOfOrigin,
     } = req.body;
 
     const existingAdmin = await Admins.findOne({ email });
@@ -25,35 +26,20 @@ const CreateAdmin = async (req, res) => {
       });
     }
 
-    const avatar = req.file ? req.file.path : null;
+    const avatar = req.file ? req.file.path : '';
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const newAdmin = new Admins({
       first_name,
       last_name,
       email,
+      phone,
       password: hashedPassword,
       age,
       gender,
       location,
       stateOfOrigin,
-      ethnicity,
-      maritalStatus,
       avatar,
-      numberOfKids,
-      height,
-      weight,
-      genotype,
-      bloodGroup,
-      complexion,
-      qualification,
-      profession,
-      hobbies,
-      religiousLevel,
-      spouseQualities,
-      dealBreakers,
-      physicalChallenges,
-      bio,
     });
 
     const savedAdmin = await newAdmin.save();
@@ -91,14 +77,11 @@ const loginAdmin = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: Admin._id, isAuthenticated: Admin.isAuthenticated === "true" },
+      { id: Admin._id, isAuthenticated: Admin.isAuthenticated },
       process.env.SECRET_KEY,
       { expiresIn: '4h' }
     );
 
-
-
-    // Set Admin cookie with basic Admin info
     const safeAdmin = {
       id: Admin._id,
       name: Admin.first_name + " " + Admin.last_name,
@@ -106,24 +89,21 @@ const loginAdmin = async (req, res) => {
       avatar: Admin.avatar,
     };
 
-    // Set token cookie
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
       sameSite: "None",
-      domain: ".halalmatchmakings.com",  
-      maxAge: 4 * 60 * 60 * 1000, 
+      domain: ".halalmatchmakings.com",
+      maxAge: 4 * 60 * 60 * 1000,
     });
 
-    // Set Admin cookie
     res.cookie("Admin", JSON.stringify(safeAdmin), {
       httpOnly: true,
       secure: true,
       sameSite: "None",
-      domain: ".halalmatchmakings.com",  
-      maxAge: 4 * 60 * 60 * 1000, 
+      domain: ".halalmatchmakings.com",
+      maxAge: 4 * 60 * 60 * 1000,
     });
-
 
     res.json({
       success: true,
@@ -147,14 +127,11 @@ const acknowledgeConsent = (req, res) => {
     httpOnly: true,
     maxAge: 365 * 24 * 60 * 60 * 1000,
   });
-
   res.status(200).json({ success: true, message: "Consent acknowledged" });
 };
 
-// Get all Admins (excluding password & version field)
 const getAllAdmins = async (req, res) => {
-  const { page = 1, limit = 9, location,  age, gender, } = req.query;
-
+  const { page = 1, limit = 9, location, age, gender } = req.query;
   const filters = {};
   if (location) filters.location = location;
   if (gender) filters.gender = gender;
@@ -162,109 +139,44 @@ const getAllAdmins = async (req, res) => {
   try {
     const totalAdmins = await Admins.countDocuments(filters);
     const totalPages = Math.ceil(totalAdmins / limit);
-
     const Admin = await Admins.find(filters)
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .select("-password -__v");
 
-    res.json({
-      success: true,
-      data: Admin,
-      totalPages,
-    });
+    res.json({ success: true, data: Admin, totalPages });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to fetch Admins", error: err.message });
   }
 };
 
-const verifyAdmin = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { isVerified } = req.body;
-
-    // Ensure a boolean value was passed
-    if (typeof isVerified !== 'boolean') {
-      return res.status(400).json({ message: 'isVerified must be a boolean' });
-    }
-
-    const user = await Admins.findByIdAndUpdate(
-      userId,
-      { isVerified },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json({
-      message: `User ${isVerified ? 'activated' : 'disabled'} successfully`,
-      user
-    });
-  } catch (err) {
-    console.error("Server error verifying user:", err);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-// Get single Admin by ID
 const getsingleAdmin = (req, res) => {
   const id = req.params.id;
-
   Admins.findById(id, { password: 0, __v: 0 })
     .then((Admin) => {
       if (!Admin) {
         return res.json({ success: false, message: "Admin not found" });
       }
-      res.json({
-        success: true,
-        message: "Admin found",
-        data: Admin,
-      });
+      res.json({ success: true, message: "Admin found", data: Admin });
     })
     .catch((err) => {
-      res.json({
-        success: false,
-        message: "Failed to fetch Admin",
-        error: err.message,
-      });
+      res.json({ success: false, message: "Failed to fetch Admin", error: err.message });
     });
 };
 
-// Update Admin info
 const updateAdmin = async (req, res) => {
   try {
     const id = req.params.id;
     const avatarpath = req.file ? req.file.path : undefined;
 
-    // Build updated fields manually
     const updatedFields = {
-      numberOfKids: req.body.numberOfKids,
+      age: req.body.age,
+      gender: req.body.gender,
       location: req.body.location,
       stateOfOrigin: req.body.stateOfOrigin,
-      ethnicity: req.body.ethnicity,
-      height: req.body.height,
-      weight: req.body.weight,
-      genotype: req.body.genotype,
-      bloodGroup: req.body.bloodGroup,
-      complexion: req.body.complexion,
-      qualification: req.body.qualification,
-      profession: req.body.profession,
-      hobbies: req.body.hobbies,
-      religiousLevel: req.body.religiousLevel,
-      spouseQualities: req.body.spouseQualities,
-      dealBreakers: req.body.dealBreakers,
-      physicalChallenges: req.body.physicalChallenges,
-      bio: req.body.bio,
-      avatar: avatarpath,
     };
+    if (avatarpath) updatedFields.avatar = avatarpath;
 
-    if (avatarpath) {
-      updatedFields.avatar = avatarpath;
-    }
-
-    // Update Admin
     const updatedAdmin = await Admins.findByIdAndUpdate(
       id,
       { $set: updatedFields },
@@ -275,14 +187,12 @@ const updateAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Admin not found" });
     }
 
-    // Build cookie content using updatedAdmin data
     const AdminCookieData = {
       id: updatedAdmin._id,
       name: `${updatedAdmin.first_name} ${updatedAdmin.last_name}`,
       avatar: updatedAdmin.avatar,
     };
 
-    // Set cookie
     res.cookie("Admin", JSON.stringify(AdminCookieData), {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
@@ -290,47 +200,33 @@ const updateAdmin = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.json({
-      success: true,
-      message: "Admin profile updated successfully",
-    });
+    res.json({ success: true, message: "Admin profile updated successfully" });
   } catch (err) {
     console.error("Update error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to update Admin",
-      error: err.message,
-    });
+    res.status(500).json({ success: false, message: "Failed to update Admin", error: err.message });
   }
 };
 
-// Request Reset Controller
 const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
-
     const Admin = await Admins.findOne({ email });
     if (!Admin) {
       return res.status(404).json({ message: "Admin not found" });
     }
 
-    const token = jwt.sign(
-      { id: Admin._id },
-      process.env.SECRET_KEY,
-      { expiresIn: "1h" }
-    );
+    const token = jwt.sign({ id: Admin._id }, process.env.SECRET_KEY, { expiresIn: "1h" });
 
     Admin.resetPasswordToken = token;
-    Admin.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    Admin.resetPasswordExpires = Date.now() + 3600000;
     await Admin.save();
 
     const resetLink = `https://www.halalmatchmakings.com/reset-password?token=${token}&email=${email}`;
 
-    // Email setup
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        Admin: process.env.EMAIL_Admin,
+        user: process.env.EMAIL_Admin,
         pass: process.env.EMAIL_PASS,
       },
     });
@@ -349,38 +245,24 @@ const requestPasswordReset = async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
-    res.status(200).json({
-      message: "Reset link sent to your email",
-      token,
-      email,
-    });
+    res.status(200).json({ message: "Reset link sent to your email", token, email });
   } catch (error) {
     console.error("Error in requestPasswordReset:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// Reset Password Controller
 const resetPassword = async (req, res) => {
   try {
     const { token, email, newPassword } = req.body;
-
-    // Correct the reference to the environment variable
-    const decoded = jwt.verify(token, process.env.SECRET_KEY); // Will throw if invalid/expired
-
-    // Find the Admin by decoded ID and email
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
     const Admin = await Admins.findOne({ _id: decoded.id, email });
     if (!Admin) return res.status(404).json({ message: "Admin not found" });
 
-    // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     Admin.password = hashedPassword;
-
-    // Remove the reset token and expiration date
     Admin.resetPasswordToken = undefined;
     Admin.resetPasswordExpires = undefined;
-
-    // Save the updated Admin
     await Admin.save();
 
     res.status(200).json({ message: "Password has been reset" });
@@ -393,35 +275,46 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const verifyAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isVerified } = req.body;
 
-// Logout Admin — clear cookies
-const logoutAdmin = (req, res) => {
-  res.clearCookie("token");
-  res.clearCookie("AdminAvatar");
-  res.clearCookie("Adminr");
-  res.json({
-    success: true,
-    message: "Logged out successfully",
-  });
+    if (typeof isVerified !== 'boolean') {
+      return res.status(400).json({ message: 'isVerified must be a boolean' });
+    }
+
+    const user = await Admins.findByIdAndUpdate(
+      userId,
+      { isVerified },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: `User ${isVerified ? 'activated' : 'disabled'} successfully`, user });
+  } catch (err) {
+    console.error("Server error verifying user:", err);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
-// Delete Admin by ID
+const logoutAdmin = (req, res) => {
+  res.clearCookie("token");
+  res.clearCookie("Admin");
+  res.json({ success: true, message: "Logged out successfully" });
+};
+
 const deleteAdmin = (req, res) => {
   const id = req.params.id;
-
   Admins.findByIdAndDelete(id)
     .then(() => {
-      res.json({
-        success: true,
-        message: "Admin deleted successfully",
-      });
+      res.json({ success: true, message: "Admin deleted successfully" });
     })
     .catch((err) => {
-      res.json({
-        success: false,
-        message: "Failed to delete Admin",
-        error: err.message,
-      });
+      res.json({ success: false, message: "Failed to delete Admin", error: err.message });
     });
 };
 
