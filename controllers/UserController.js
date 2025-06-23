@@ -417,7 +417,7 @@ const requestPasswordReset = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    const resetLink = `http://localhost:3000/reset-password?token=${token}&email=${email}`;
+    const resetLink = `https://www.halalmatchmakings.com/reset-password?token=${token}&email=${email}`;
     // Email setup
     const transporter = nodemailer.createTransport({
       service: "gmail",
