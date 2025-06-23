@@ -39,13 +39,17 @@ const getApprovedImageRequests = async (req, res) => {
       sender: req.user.id,
       type: 'image',
       status: 'accepted'
-    }).select('recipient'); // only return receiver IDs (users you can see images of)
-    res.status(200).json({ approved: approvedRequests.map(req => req.recipient) });
+    }).select('recipient');
+    
+    res.status(200).json({ 
+      approvedIds: approvedRequests.map(req => req.recipient) 
+    });
   } catch (error) {
     console.error('Error fetching approved image requests:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // Get All Notifications for Logged-in User
 const getAllNotifications = async (req, res) => {

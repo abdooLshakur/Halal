@@ -5,7 +5,7 @@ const authenticateToken = require('../middleware/Auth');
 const {
   requestImageAccess,
   respondToImageRequest,
-  getImageRequests
+  getProfileImage
 } = require("../controllers/ImagerequestController");
 
 // Request to view image
@@ -15,6 +15,6 @@ router.post("/image-access-request", authenticateToken, requestImageAccess);
 router.put("/update-image-request/:requestId", authenticateToken, respondToImageRequest);
 
 // Get target user's details including access status
-router.get("/image-request/:userId", authenticateToken, getImageRequests);
+router.get("/image-request/:userId", authenticateToken, getProfileImage);
 
 module.exports = router;

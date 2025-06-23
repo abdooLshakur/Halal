@@ -1,5 +1,6 @@
 const ImageRequest = require("../models/Imagerequestmodal");
 const User = require("../models/UserModel");
+const Notification = require("../models/notification");
 
 // Send image view request
 const requestImageAccess = async (req, res) => {
@@ -36,7 +37,10 @@ const respondToImageRequest = async (req, res) => {
   const { action } = req.body; // 'accepted' or 'rejected'
 
   try {
-    const request = await ImageRequest.findById(requestId);
+    const request = await User.findByIdAndUpdate(request.targetUser, {
+      $addToSet: { approvedViewers: request.requester }
+    });
+
 
     if (!request) {
       return res.status(404).json({ success: false, message: "Request not found" });
@@ -61,68 +65,39 @@ const respondToImageRequest = async (req, res) => {
 };
 
 
-// Get target user's details including access status
-const getImageRequests = async (req, res) => {
+
+const getProfileImage = async (req, res) => {
+  const requesterId = req.user.id;
+  const targetUserId = req.params.userId;
+
   try {
-    const userId = req.user._id;
+    const targetUser = await User.findById(targetUserId).select('avatar');
 
-    const incomingRequests = await ImageRequest.find({ targetUser: userId })
-      .populate({
-        path: 'requester',
-        select: 'first_name last_name'
-      })
-      .populate({
-        path: 'targetUser',
-        select: 'first_name last_name'
-      });
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-    const sentRequests = await ImageRequest.find({ requester: userId })
-      .populate({
-        path: 'requester',
-        select: 'first_name last_ame'
-      })
-      .populate({
-        path: 'targetUser',
-        select: 'first_name last_name'
-      });
-
-    const approvedRequests = await ImageRequest.find({
-      $or: [{ requester: userId }, { targetUser: userId }],
-      status: 'approved',
-    })
-      .populate({
-        path: 'requester',
-        select: 'first_name last_name'
-      })
-      .populate({
-        path: 'targetUser',
-        select: 'first_name last_name'
-      });
-
-    const formatRequests = (requests) => {
-      return requests.map(req => ({
-        _id: req._id,
-        requesterFullName: `${req.requester.first_name} ${req.requester.last_name}`,
-        targetUserFullName: `${req.targetUser.first_name} ${req.targetUser.last_name}`,
-        status: req.status,
-        createdAt: req.createdAt
-      }));
-    };
-
-    res.status(200).json({
-      success: true,
-      data: {
-        incomingRequests: formatRequests(incomingRequests),
-        sentRequests: formatRequests(sentRequests),
-        approvedRequests: formatRequests(approvedRequests),
-      }
+    // ✅ Check if there is an accepted image request notification
+    const isApproved = await Notification.exists({
+      sender: requesterId,
+      recipient: targetUserId,
+      type: 'image',
+      status: 'accepted'
     });
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    if (!isApproved) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    res.status(200).json({ success: true, image: targetUser.avatar });
+
+  } catch (err) {
+    console.error("Error fetching profile image:", err);
+    res.status(500).json({ success: false, message: "Error fetching image", error: err.message });
   }
 };
+
+
 
 
 
@@ -132,5 +107,5 @@ const getImageRequests = async (req, res) => {
 module.exports = {
   requestImageAccess,
   respondToImageRequest,
-  getImageRequests,
+  getProfileImage,
 };
