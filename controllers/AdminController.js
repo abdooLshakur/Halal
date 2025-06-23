@@ -77,9 +77,9 @@ const loginAdmin = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: Admin._id, isAuthenticated: Admin.isAuthenticated },
+      { id: Admin._id, isAuthenticated: Admin.isAuthenticated === "true" },
       process.env.SECRET_KEY,
-      { expiresIn: '4h' }
+      { expiresIn: '1d' }
     );
 
     const safeAdmin = {
@@ -89,16 +89,26 @@ const loginAdmin = async (req, res) => {
       avatar: Admin.avatar,
     };
 
-    const cookieConfig = {
+    const isProduction = process.env.NODE_ENV === "production";
+
+    const cookieOptionsToken = {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com",
-      maxAge: 4 * 60 * 60 * 1000,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+      ...(isProduction && { domain: ".halalmatchmakings.com" }),
     };
 
-    res.cookie("token", token, cookieConfig);
-    res.cookie("Admin", JSON.stringify(safeAdmin), cookieConfig);
+    const cookieOptionsAdmin = {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+      ...(isProduction && { domain: ".halalmatchmakings.com" }),
+    };
+
+    res.cookie("token", token, cookieOptionsToken);
+    res.cookie("Admin", JSON.stringify(safeAdmin), cookieOptionsAdmin);
 
     res.json({
       success: true,
@@ -114,6 +124,7 @@ const loginAdmin = async (req, res) => {
     });
   }
 };
+
 
 const acknowledgeConsent = (req, res) => {
   res.cookie("cookie_consent", "accepted", {
@@ -223,7 +234,7 @@ const requestPasswordReset = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_Admin,
+        Admin: process.env.EMAIL_Admin,
         pass: process.env.EMAIL_PASS,
       },
     });
@@ -274,26 +285,26 @@ const resetPassword = async (req, res) => {
 
 const verifyAdmin = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { AdminId } = req.params;
     const { isVerified } = req.body;
 
     if (typeof isVerified !== 'boolean') {
       return res.status(400).json({ message: 'isVerified must be a boolean' });
     }
 
-    const user = await Admins.findByIdAndUpdate(
-      userId,
+    const Admin = await Admins.findByIdAndUpdate(
+      AdminId,
       { isVerified },
       { new: true }
     );
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    if (!Admin) {
+      return res.status(404).json({ message: 'Admin not found' });
     }
 
-    res.json({ message: `User ${isVerified ? 'activated' : 'disabled'} successfully`, user });
+    res.json({ message: `Admin ${isVerified ? 'activated' : 'disabled'} successfully`, Admin });
   } catch (err) {
-    console.error("Server error verifying user:", err);
+    console.error("Server error verifying Admin:", err);
     res.status(500).json({ message: 'Server error' });
   }
 };

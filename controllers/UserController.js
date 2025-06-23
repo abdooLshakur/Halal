@@ -2,8 +2,8 @@ const bcrypt = require("bcryptjs");
 const Users = require("../models/UserModel");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
+const axios = require("axios");
 
-// Create a new user
 const CreateUser = async (req, res) => {
   try {
     const {
@@ -14,25 +14,15 @@ const CreateUser = async (req, res) => {
       age,
       gender,
       location,
-      stateOfOrigin,
-      ethnicity,
       maritalStatus,
-      numberOfKids,
-      height,
-      weight,
-      genotype,
-      bloodGroup,
-      complexion,
-      qualification,
-      profession,
-      hobbies,
-      religiousLevel,
-      spouseQualities,
-      dealBreakers,
-      physicalChallenges,
-      bio
+      pledgeAccepted,
+      refereeName,
+      refereePhone,
+      refereeRelationship,
+      marriageIntentDuration,
     } = req.body;
 
+    // Check if user already exists
     const existingUser = await Users.findOne({ email });
     if (existingUser) {
       return res.json({
@@ -41,9 +31,11 @@ const CreateUser = async (req, res) => {
       });
     }
 
-    const avatar = req.file ? req.file.path : null;
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
+    const avatar = req.file ? req.file.path : null;
 
+    // Create new user
     const newUser = new Users({
       first_name,
       last_name,
@@ -52,26 +44,18 @@ const CreateUser = async (req, res) => {
       age,
       gender,
       location,
-      stateOfOrigin,
-      ethnicity,
       maritalStatus,
-      avatar,
-      numberOfKids,
-      height,
-      weight,
-      genotype,
-      bloodGroup,
-      complexion,
-      qualification,
-      profession,
-      hobbies,
-      religiousLevel,
-      spouseQualities,
-      dealBreakers,
-      physicalChallenges,
-      bio,
+      marriageIntentDuration,
+      pledgeAccepted: Users.pledgeAccepted === true,
+      referee: {
+        name: refereeName,
+        phone: refereePhone,
+        relationship: refereeRelationship
+      },
+      avatar
     });
 
+    // Save to DB
     const savedUser = await newUser.save();
 
     res.json({
@@ -79,8 +63,9 @@ const CreateUser = async (req, res) => {
       message: "User registered successfully",
       data: savedUser,
     });
+
   } catch (err) {
-    res.json({
+    res.status(500).json({
       success: false,
       message: "Sign up failed",
       error: err.message,
@@ -97,9 +82,7 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.json({ success: false, message: "User not found" });
     }
-    if (user.isVerified === false) {
-      return res.json({ success: false, message: "User not verified" });
-    }
+   
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -109,36 +92,67 @@ const loginUser = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, isAuthenticated: user.isAuthenticated === "true" },
       process.env.SECRET_KEY,
-      { expiresIn: '7d' }
+      { expiresIn: '2d' }
     );
 
 
 
+    // // Set user cookie with basic user info
+    // const safeUser = {
+    //   id: user._id,
+    //   name: user.first_name + " " + user.last_name,
+    //   email: user.email,
+    //   avatar: user.avatar,
+    // };
+
+    // // Set token cookie
+    // res.cookie("token", token, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: "None",
+    //   domain: ".halalmatchmakings.com",  // ✅ Add this
+    //   maxAge: 2 * 24 * 60 * 60 * 1000,
+    // });
+
+    // // Set user cookie
+    // res.cookie("user", JSON.stringify(safeUser), {
+    //   httpOnly: false,
+    //   secure: true,
+    //   sameSite: "None",
+    //   domain: ".halalmatchmakings.com",  // ✅ Add this
+    //   maxAge: 2 * 24 * 60 * 60 * 1000,
+    // });
+
     // Set user cookie with basic user info
-    const safeUser = {
-      id: user._id,
-      name: user.first_name + " " + user.last_name,
-      email: user.email,
-      avatar: user.avatar,
-    };
+const safeUser = {
+  id: user._id,
+  name: user.first_name + " " + user.last_name,
+  email: user.email,
+  avatar: user.avatar,
+};
 
-    // Set token cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      domain: ".halalmatchmakings.com",  // ✅ Add this
-      maxAge: 2 * 24 * 60 * 60 * 1000,
-    });
+const isProduction = process.env.NODE_ENV === "production";
 
-    // Set user cookie
-    res.cookie("user", JSON.stringify(safeUser), {
-      httpOnly: false,
-      secure: true,
-      sameSite: "None",
-      domain: ".halalmatchmakings.com",  // ✅ Add this
-      maxAge: 2 * 24 * 60 * 60 * 1000,
-    });
+const cookieOptionsToken = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "None" : "Lax",
+  maxAge: 2 * 24 * 60 * 60 * 1000,
+  ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
+};
+
+const cookieOptionsUser = {
+  httpOnly: false,
+  secure: isProduction,
+  sameSite: isProduction ? "None" : "Lax",
+  maxAge: 2 * 24 * 60 * 60 * 1000,
+  ...(isProduction && { domain: ".halalmatchmakings.com" }),
+};
+
+// Set cookies
+res.cookie("token", token, cookieOptionsToken);
+res.cookie("user", JSON.stringify(safeUser), cookieOptionsUser);
+
 
     res.json({
       success: true,
@@ -227,9 +241,9 @@ const updateUser = async (req, res) => {
     const id = req.params.id;
     const avatarpath = req.file ? req.file.path : undefined;
 
-    // Build updated fields manually
     const updatedFields = {
       numberOfKids: req.body.numberOfKids,
+      numberOfWives: req.body.numberOfWives,
       location: req.body.location,
       stateOfOrigin: req.body.stateOfOrigin,
       ethnicity: req.body.ethnicity,
@@ -243,17 +257,23 @@ const updateUser = async (req, res) => {
       hobbies: req.body.hobbies,
       religiousLevel: req.body.religiousLevel,
       spouseQualities: req.body.spouseQualities,
+      preferredSpouseTraits: req.body.preferredSpouseTraits,
       dealBreakers: req.body.dealBreakers,
       physicalChallenges: req.body.physicalChallenges,
+      marriageIntentDuration: req.body.marriageIntentDuration,
+      pledgeAccepted: req.body.pledgeAccepted,
+      referee: {
+        name: req.body.refereeName,
+        phone: req.body.refereePhone,
+        relationship: req.body.refereeRelationship
+      },
       bio: req.body.bio,
-      avatar: avatarpath,
     };
 
     if (avatarpath) {
       updatedFields.avatar = avatarpath;
     }
 
-    // Update user
     const updatedUser = await Users.findByIdAndUpdate(
       id,
       { $set: updatedFields },
@@ -264,14 +284,12 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Build cookie content using updatedUser data
     const userCookieData = {
       id: updatedUser._id,
       name: `${updatedUser.first_name} ${updatedUser.last_name}`,
       avatar: updatedUser.avatar,
     };
 
-    // Set cookie
     res.cookie("user", JSON.stringify(userCookieData), {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
@@ -292,33 +310,90 @@ const updateUser = async (req, res) => {
     });
   }
 };
+
 const verifyUser = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { isVerified } = req.body;
-
-    // Ensure a boolean value was passed
-    if (typeof isVerified !== 'boolean') {
-      return res.status(400).json({ message: 'isVerified must be a boolean' });
+    // Parse user from cookie
+    const userCookie = req.cookies.user;
+    if (!userCookie) {
+      return res.status(401).json({ error: "Unauthorized: No user cookie found" });
     }
 
-    const user = await Users.findByIdAndUpdate(
-      userId,
-      { isVerified },
-      { new: true }
-    );
+    const parsedUser = JSON.parse(userCookie);
 
+    const user = await Users.findOne({ email: parsedUser.email });
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
-    res.json({
-      message: `User ${isVerified ? 'activated' : 'disabled'} successfully`,
-      user
+    res.json({ activated: user.isVerified, email: user.email });
+  } catch (err) {
+    console.error("checkactivation error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+const activateUserAfterPayment = async (req, res) => {
+  try {
+    const { email, reference } = req.body;
+
+    if (!email || !reference) {
+      return res.status(400).json({ success: false, message: "Missing email or payment reference" });
+    }
+
+    // Verify payment with Paystack
+    const paystackRes = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, // Make sure it's set in your .env
+      },
+    });
+
+    const paymentData = paystackRes.data;
+
+    if (!paymentData.status || paymentData.data.status !== "success") {
+      return res.status(400).json({ success: false, message: "Payment not successful" });
+    }
+
+    // Optional: You can check payment amount, currency, and email for extra validation
+    if (paymentData.data.customer.email !== email) {
+      return res.status(403).json({ success: false, message: "Email mismatch in transaction" });
+    }
+
+    // Activate user
+    const user = await Users.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    user.isVerified = true;
+    await user.save();
+
+    // Update cookie
+    const userCookieData = {
+      id: user._id,
+      name: `${user.first_name} ${user.last_name}`,
+      email: user.email,
+      avatar: user.avatar,
+      activated: true,
+    };
+
+    res.cookie("user", JSON.stringify(userCookieData), {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User activated after verified payment",
     });
   } catch (err) {
-    console.error("Server error verifying user:", err);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Paystack verification error:", err.response?.data || err.message);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error during verification",
+    });
   }
 };
 
@@ -342,8 +417,7 @@ const requestPasswordReset = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    const resetLink = `https://halalmatch.vercel.app/reset-password?token=${token}&email=${email}`;
-
+    const resetLink = `http://localhost:3000/reset-password?token=${token}&email=${email}`;
     // Email setup
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -464,6 +538,7 @@ const logoutUser = (req, res) => {
   });
 };
 
+
 // Delete user by ID
 const deleteUser = (req, res) => {
   const id = req.params.id;
@@ -483,7 +558,7 @@ const deleteUser = (req, res) => {
       });
     });
 };
-
+  
 module.exports = {
   CreateUser,
   loginUser,
@@ -494,6 +569,7 @@ module.exports = {
   updateUser,
   contactUs,
   verifyUser,
+  activateUserAfterPayment,
   acknowledgeConsent,
   deleteUser,
   logoutUser,
