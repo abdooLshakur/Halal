@@ -79,7 +79,7 @@ const loginAdmin = async (req, res) => {
     const token = jwt.sign(
       { id: Admin._id, isAuthenticated: Admin.isAuthenticated },
       process.env.SECRET_KEY,
-      { expiresIn: '1d' }
+      { expiresIn: '4h' }
     );
 
     const safeAdmin = {

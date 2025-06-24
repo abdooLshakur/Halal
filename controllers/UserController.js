@@ -332,7 +332,31 @@ const verifyUser = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+const manualactvateuser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isVerified } = req.body;
 
+    if (typeof isVerified !== 'boolean') {
+      return res.status(400).json({ message: 'isVerified must be a boolean' });
+    }
+
+    const user = await Users.findByIdAndUpdate(
+      userId,
+      { isVerified },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: `User ${isVerified ? 'activated' : 'disabled'} successfully`, user });
+  } catch (err) {
+    console.error("Server error verifying user:", err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 const activateUserAfterPayment = async (req, res) => {
   try {
     const { email, reference } = req.body;
@@ -485,6 +509,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
+
 const contactUs = async (req, res) => {
   try {
     const { name, email, message } = req.body;
@@ -571,6 +596,7 @@ module.exports = {
   verifyUser,
   activateUserAfterPayment,
   acknowledgeConsent,
+  manualactvateuser,
   deleteUser,
   logoutUser,
 };
