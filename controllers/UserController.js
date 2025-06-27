@@ -22,49 +22,57 @@ const CreateUser = async (req, res) => {
       marriageIntentDuration,
     } = req.body;
 
-    // Check if user already exists
-    const existingUser = await Users.findOne({ email });
+    // Extra check: Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Double-check if email already exists
+    const existingUser = await Users.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res.json({
+      return res.status(409).json({
         success: false,
         message: "Email already exists",
       });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
     const avatar = req.file ? req.file.path : null;
 
-    // Create new user
     const newUser = new Users({
       first_name,
       last_name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       age,
       gender,
       location,
       maritalStatus,
       marriageIntentDuration,
-      pledgeAccepted: Users.pledgeAccepted === true,
+      pledgeAccepted,
       referee: {
         name: refereeName,
         phone: refereePhone,
-        relationship: refereeRelationship
+        relationship: refereeRelationship,
       },
-      avatar
+      avatar,
     });
 
-    // Save to DB
     const savedUser = await newUser.save();
 
-    res.json({
+    res.status(201).json({
       success: true,
       message: "User registered successfully",
       data: savedUser,
     });
 
   } catch (err) {
+    // Handle duplicate key error
+    if (err.code === 11000 && err.keyValue?.email) {
+      return res.status(409).json({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: "Sign up failed",
@@ -72,6 +80,7 @@ const CreateUser = async (req, res) => {
     });
   }
 };
+
 
 // Login user
 const loginUser = async (req, res) => {
