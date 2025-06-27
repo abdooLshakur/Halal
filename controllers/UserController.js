@@ -82,7 +82,7 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.json({ success: false, message: "User not found" });
     }
-   
+
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -124,34 +124,34 @@ const loginUser = async (req, res) => {
     // });
 
     // Set user cookie with basic user info
-const safeUser = {
-  id: user._id,
-  name: user.first_name + " " + user.last_name,
-  email: user.email,
-  avatar: user.avatar,
-};
+    const safeUser = {
+      id: user._id,
+      name: user.first_name + " " + user.last_name,
+      email: user.email,
+      avatar: user.avatar,
+    };
 
-const isProduction = process.env.NODE_ENV === "production";
+    const isProduction = process.env.NODE_ENV === "production";
 
-const cookieOptionsToken = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? "None" : "Lax",
-  maxAge: 2 * 24 * 60 * 60 * 1000,
-  ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
-};
+    const cookieOptionsToken = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+      ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
+    };
 
-const cookieOptionsUser = {
-  httpOnly: false,
-  secure: isProduction,
-  sameSite: isProduction ? "None" : "Lax",
-  maxAge: 2 * 24 * 60 * 60 * 1000,
-  ...(isProduction && { domain: ".halalmatchmakings.com" }),
-};
+    const cookieOptionsUser = {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+      ...(isProduction && { domain: ".halalmatchmakings.com" }),
+    };
 
-// Set cookies
-res.cookie("token", token, cookieOptionsToken);
-res.cookie("user", JSON.stringify(safeUser), cookieOptionsUser);
+    // Set cookies
+    res.cookie("token", token, cookieOptionsToken);
+    res.cookie("user", JSON.stringify(safeUser), cookieOptionsUser);
 
 
     res.json({
@@ -182,34 +182,43 @@ const acknowledgeConsent = (req, res) => {
 
 // Get all users (excluding password & version field)
 const getAllUsers = async (req, res) => {
-  const { page = 1, limit = 9, location, ethnicity, age, gender, maritalStatus, height, weight, } = req.query;
+  const {
+    location,
+    ethnicity,
+    age,
+    gender,
+    maritalStatus,
+    height,
+    weight,
+  } = req.query;
 
   const filters = {};
+
   if (location) filters.location = location;
   if (ethnicity) filters.ethnicity = ethnicity;
   if (gender) filters.gender = gender;
   if (maritalStatus) filters.maritalStatus = maritalStatus;
   if (height) filters.height = { $lte: Number(height) };
   if (weight) filters.weight = { $lte: Number(weight) };
+  if (age) filters.age = { $lte: Number(age) };
 
   try {
-    const totalUsers = await Users.countDocuments(filters);
-    const totalPages = Math.ceil(totalUsers / limit);
-
-    const users = await Users.find(filters)
-      .skip((page - 1) * limit)
-      .limit(Number(limit))
-      .select("-password -__v");
+    const users = await Users.find(filters).select("-password -__v");
 
     res.json({
       success: true,
       data: users,
-      totalPages,
+      total: users.length,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to fetch users", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+      error: err.message,
+    });
   }
 };
+
 
 // Get single user by ID
 const getsingleUser = (req, res) => {
@@ -481,12 +490,15 @@ const resetPassword = async (req, res) => {
   try {
     const { token, email, newPassword } = req.body;
 
-    // Correct the reference to the environment variable
+    // CorrecFerence to the environment variable
     const decoded = jwt.verify(token, process.env.SECRET_KEY); // Will throw if invalid/expired
 
     // Find the user by decoded ID and email
     const user = await Users.findOne({ _id: decoded.id, email });
     if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.resetPasswordExpires < Date.now()) {
+      return res.status(400).json({ message: "Reset token expired" });
+    }
 
     // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -583,7 +595,7 @@ const deleteUser = (req, res) => {
       });
     });
 };
-  
+
 module.exports = {
   CreateUser,
   loginUser,
