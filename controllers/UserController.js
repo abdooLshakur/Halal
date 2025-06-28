@@ -13,19 +13,33 @@ const CreateUser = async (req, res) => {
       password,
       age,
       gender,
-      location,
       maritalStatus,
+      phone,
       pledgeAccepted,
-      refereeName,
-      refereePhone,
-      refereeRelationship,
       marriageIntentDuration,
     } = req.body;
 
-    // Extra check: Normalize email
+    // ✅ Validate required fields
+    if (
+      !first_name ||
+      !last_name ||
+      !email ||
+      !password ||
+      !age ||
+      !gender ||
+      !maritalStatus ||
+      !phone ||
+      pledgeAccepted === undefined ||
+      !marriageIntentDuration
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Double-check if email already exists
     const existingUser = await Users.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(409).json({
@@ -43,16 +57,11 @@ const CreateUser = async (req, res) => {
       email: normalizedEmail,
       password: hashedPassword,
       age,
+      phone,
       gender,
-      location,
       maritalStatus,
       marriageIntentDuration,
       pledgeAccepted,
-      referee: {
-        name: refereeName,
-        phone: refereePhone,
-        relationship: refereeRelationship,
-      },
       avatar,
     });
 
@@ -65,13 +74,16 @@ const CreateUser = async (req, res) => {
     });
 
   } catch (err) {
-    // Handle duplicate key error
+    // Better error clarity
     if (err.code === 11000 && err.keyValue?.email) {
       return res.status(409).json({
         success: false,
         message: "Email already exists",
       });
     }
+
+    // Log for dev only
+    console.error("Signup error:", err);
 
     res.status(500).json({
       success: false,
@@ -80,7 +92,6 @@ const CreateUser = async (req, res) => {
     });
   }
 };
-
 
 // Login user
 const loginUser = async (req, res) => {
@@ -280,11 +291,7 @@ const updateUser = async (req, res) => {
       physicalChallenges: req.body.physicalChallenges,
       marriageIntentDuration: req.body.marriageIntentDuration,
       pledgeAccepted: req.body.pledgeAccepted,
-      referee: {
-        name: req.body.refereeName,
-        phone: req.body.refereePhone,
-        relationship: req.body.refereeRelationship
-      },
+      phone: req.body.phone,
       bio: req.body.bio,
     };
 

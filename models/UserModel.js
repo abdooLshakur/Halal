@@ -6,6 +6,7 @@ const UserSchema = new Schema({
   last_name: { type: String, required: true },
   email: { type: String, required: true, unique: true, },
   password: { type: String, required: true },
+  phone: { type: String, required: true },
   age: { type: String },
   gender: { type: String, required: true, enum: ['Male', 'Female'] },
   numberOfKids: { type: String, default: 0 },
@@ -44,12 +45,6 @@ const UserSchema = new Schema({
   }, // NEW
 
   pledgeAccepted: { type: Boolean, default: false, }, // NEW
-
-  referee: {
-    name: { type: String },
-    phone: { type: String },
-    relationship: { type: String },
-  }, // NEW
 
   avatar: { type: String, default: '' },
   avatarAccessGrantedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
