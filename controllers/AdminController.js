@@ -10,49 +10,79 @@ const CreateAdmin = async (req, res) => {
       first_name,
       last_name,
       email,
-      phone,
+      phone = "",
       password,
       age,
       gender,
-      location,
-      stateOfOrigin,
+      location = "",
+      stateOfOrigin = "",
     } = req.body;
 
-    const existingAdmin = await Admins.findOne({ email });
-    if (existingAdmin) {
-      return res.json({
+    console.log("📥 Incoming signup request:", req.body);
+
+    // === Required Field Check ===
+    if (!first_name || !last_name || !email || !password || !gender || !age) {
+      return res.status(400).json({
         success: false,
-        message: "Email already exists",
+        message: "Missing required fields: first name, last name, email, password, gender, age",
       });
     }
 
+    // === Age Validation ===
+    const isValidAge = /^\d+$/.test(age) && parseInt(age) >= 18;
+    if (!isValidAge) {
+      return res.status(400).json({
+        success: false,
+        message: "You must be at least 18 years old to register",
+      });
+    }
+
+    // === Email Uniqueness Check ===
+    const existingAdmin = await Admins.findOne({ email: email.trim().toLowerCase() });
+    if (existingAdmin) {
+      return res.status(409).json({
+        success: false,
+        message: "An account with this email already exists",
+      });
+    }
+
+    // === Optional File Upload (avatar) ===
     const avatar = req.file ? req.file.path : '';
+
+    // === Hash the Password ===
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // === Create New Admin ===
     const newAdmin = new Admins({
-      first_name,
-      last_name,
-      email,
-      phone,
+      first_name: first_name.trim(),
+      last_name: last_name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
       password: hashedPassword,
-      age,
-      gender,
-      location,
-      stateOfOrigin,
+      age: age.trim(), // or use parseInt(age) if model is changed
+      gender: gender.trim(),
+      location: location.trim(),
+      stateOfOrigin: stateOfOrigin.trim(),
       avatar,
     });
 
     const savedAdmin = await newAdmin.save();
 
-    res.json({
+    res.status(201).json({
       success: true,
       message: "Admin registered successfully",
       data: savedAdmin,
     });
   } catch (err) {
-    res.json({
+    console.error("❌ Sign-up error:", {
+      message: err.message,
+      stack: err.stack,
+      body: req.body,
+    });
+
+    res.status(500).json({
       success: false,
-      message: "Sign up failed",
+      message: "Sign up failed. Please try again later.",
       error: err.message,
     });
   }
