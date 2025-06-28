@@ -1,4 +1,5 @@
 const Notification = require('../models/notification');
+const User = require('../models/UserModel');
 
 // Create a new Notification (Submit Interest)
 const createNotification = async (req, res) => {
@@ -40,16 +41,15 @@ const getApprovedImageRequests = async (req, res) => {
       type: 'image',
       status: 'accepted'
     }).select('recipient');
-    
-    res.status(200).json({ 
-      approvedIds: approvedRequests.map(req => req.recipient) 
+
+    res.status(200).json({
+      approvedIds: approvedRequests.map(req => req.recipient)
     });
   } catch (error) {
     console.error('Error fetching approved image requests:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 // Get All Notifications for Logged-in User
 const getAllNotifications = async (req, res) => {
@@ -59,7 +59,7 @@ const getAllNotifications = async (req, res) => {
     // Build query object
     const query = {
       $or: [
-        { recipient: req.user._id }, 
+        { recipient: req.user._id },
         { sender: req.user._id },
       ]
     };
@@ -109,22 +109,22 @@ const updateNotificationStatus = async (req, res) => {
       return res.status(404).json({ message: 'Notification not found or unauthorized.' });
     }
 
-    // Perform action (only recipient can accept/reject,)
+    // Inside updateNotificationStatus, just before saving:
     if (action === 'accepted' || action === 'rejected') {
       if (notification.recipient.toString() !== req.user._id.toString()) {
         return res.status(403).json({ message: 'You are not authorized to respond to this notification.' });
       }
-      notification.status = action; // Change status to accepted or rejected
-    } else if (action === 'delete') {
-      if (notification.sender.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'You are not authorized to delete this notification.' });
+
+      notification.status = action; // Update the notification status
+
+      // 💡 Add avatar access if it's an image request and accepted
+      if (action === 'accepted' && notification.type === 'image') {
+        await User.findByIdAndUpdate(notification.recipient, {
+          $addToSet: { avatarAccessGrantedTo: notification.sender }
+        });
       }
-      // Delete notification if sender
-      await notification.remove();
-      return res.status(200).json({ success: true, message: 'Notification deleted.' });
-    } else {
-      return res.status(400).json({ message: 'Invalid action.' });
     }
+
 
     // Save the notification after performing the action
     await notification.save();

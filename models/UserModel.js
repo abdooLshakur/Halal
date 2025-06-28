@@ -52,6 +52,7 @@ const UserSchema = new Schema({
   }, // NEW
 
   avatar: { type: String, default: '' },
+  avatarAccessGrantedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   approvedViewers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   isAuthenticated: { type: Boolean, default: false },
   isVerified: { type: Boolean, default: false },
