@@ -158,7 +158,7 @@ const loginUser = async (req, res) => {
       secure: isProduction,
       sameSite: isProduction ? "None" : "Lax",
       maxAge: 2 * 24 * 60 * 60 * 1000,
-      ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
+      ...(isProduction && { domain: ".halalmatchmakings.com" }), 
     };
 
     const cookieOptionsUser = {
@@ -357,6 +357,7 @@ const verifyUser = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 const manualactvateuser = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -382,6 +383,7 @@ const manualactvateuser = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 const activateUserAfterPayment = async (req, res) => {
   try {
     const { email, reference } = req.body;
