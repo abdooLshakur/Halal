@@ -19,6 +19,7 @@ const authenticateToken = async (req, res, next) => {
       if (!user) {
         return res.status(404).json({ success: false, message: "User not found" });
       }
+console.log("Setting user cookie:", JSON.stringify(user));
 
       req.user = user;
       next();
