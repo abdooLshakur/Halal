@@ -346,6 +346,7 @@ const verifyUser = async (req, res) => {
     }
 
     console.log("Raw user cookie:", userCookie);
+    console.log("Setting user cookie:", JSON.stringify(user));
 
     // Step 2: Try to parse the cookie
     let parsedUser;
