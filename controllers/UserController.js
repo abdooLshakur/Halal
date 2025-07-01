@@ -338,41 +338,28 @@ const updateUser = async (req, res) => {
 
 const verifyUser = async (req, res) => {
   try {
-    let parsedUser;
+    const { email } = req.body;
 
-    // Try from cookie
-    if (req.cookies?.user) {
-      try {
-        parsedUser = JSON.parse(req.cookies.user);
-      } catch (err) {
-        console.warn("Malformed user cookie");
-      }
+    if (!email) {
+      return res.status(400).json({ error: "Email is required in request body" });
     }
 
-    // Try from request body if cookie missing or invalid
-    if (!parsedUser && req.body?.user) {
-      parsedUser = req.body.user;
-    }
-
-    if (!parsedUser?.email) {
-      return res.status(400).json({ error: "No valid user data found" });
-    }
-
-    const user = await Users.findOne({ email: parsedUser.email });
+    const user = await Users.findOne({ email });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    return res.json({
+    return res.status(200).json({
       activated: user.isVerified,
       email: user.email,
     });
 
   } catch (err) {
     console.error("verifyUser error:", err);
-    return res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 const manualactvateuser = async (req, res) => {
   try {
