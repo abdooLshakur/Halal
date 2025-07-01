@@ -239,7 +239,6 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-
 // Get single user by ID
 const getsingleUser = (req, res) => {
   const id = req.params.id;
@@ -338,15 +337,14 @@ const updateUser = async (req, res) => {
 
 const verifyUser = async (req, res) => {
   try {
-    // Parse user from cookie
-    const userCookie = req.cookies.user;
-    if (!userCookie) {
-      return res.status(401).json({ error: "Unauthorized: No user cookie found" });
+    const token = req.cookies.token;
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: No token provided" });
     }
 
-    const parsedUser = JSON.parse(userCookie);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await Users.findOne({ email: decoded.email });
 
-    const user = await Users.findOne({ email: parsedUser.email });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -357,6 +355,7 @@ const verifyUser = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 
 const manualactvateuser = async (req, res) => {
   try {
