@@ -144,26 +144,35 @@ const loginUser = async (req, res) => {
     // });
 
     // Set user cookie with basic user info
- const cookieOptionsToken = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? "None" : "Lax",
-  maxAge: 2 * 24 * 60 * 60 * 1000,
-  path: "/",
-  ...(isProduction && { domain: ".halalmatchmakings.com" }),
-};
+    const safeUser = {
+      id: user._id,
+      name: user.first_name + " " + user.last_name,
+      email: user.email,
+      avatar: user.avatar,
+    };
 
-const cookieOptionsUser = {
-  httpOnly: false, // Or true if you don’t need it on client
-  secure: isProduction,
-  sameSite: isProduction ? "None" : "Lax",
-  maxAge: 2 * 24 * 60 * 60 * 1000,
-  path: "/",
-  ...(isProduction && { domain: ".halalmatchmakings.com" }),
-};
+    const isProduction = process.env.NODE_ENV === "production";
 
-res.cookie("token", token, cookieOptionsToken);
-res.cookie("user", JSON.stringify(safeUser), cookieOptionsUser); 
+    const cookieOptionsToken = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+      ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
+    };
+
+    const cookieOptionsUser = {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+      ...(isProduction && { domain: ".halalmatchmakings.com" }),
+    };
+
+    // Set cookies
+    res.cookie("token", token, cookieOptionsToken);
+    res.cookie("user", JSON.stringify(safeUser), cookieOptionsUser);
+
 
     res.json({
       success: true,
@@ -329,43 +338,25 @@ const updateUser = async (req, res) => {
 
 const verifyUser = async (req, res) => {
   try {
-    let parsedUser;
-
-    // Try from cookie
-    if (req.cookies?.user) {
-      try {
-        parsedUser = JSON.parse(req.cookies.user);
-      } catch (err) {
-        console.warn("Malformed user cookie");
-      }
+    // Parse user from cookie
+    const userCookie = req.cookies.user;
+    if (!userCookie) {
+      return res.status(401).json({ error: "Unauthorized: No user cookie found" });
     }
 
-    // Try from request body if cookie missing or invalid
-    if (!parsedUser && req.body?.user) {
-      parsedUser = req.body.user;
-    }
-
-    if (!parsedUser?.email) {
-      return res.status(400).json({ error: "No valid user data found" });
-    }
+    const parsedUser = JSON.parse(userCookie);
 
     const user = await Users.findOne({ email: parsedUser.email });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    return res.json({
-      activated: user.isVerified,
-      email: user.email,
-    });
-
+    res.json({ activated: user.isVerified, email: user.email });
   } catch (err) {
-    console.error("verifyUser error:", err);
-    return res.status(500).json({ error: "Server error" });
+    console.error("checkactivation error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
-
 const manualactvateuser = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -391,7 +382,6 @@ const manualactvateuser = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 const activateUserAfterPayment = async (req, res) => {
   try {
     const { email, reference } = req.body;
