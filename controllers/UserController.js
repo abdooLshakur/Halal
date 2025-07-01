@@ -350,8 +350,7 @@ const verifyUser = async (req, res) => {
     }
 
     return res.status(200).json({
-      activated: user.isVerified,
-      email: user.email,
+      activated: user.isVerified, // ✅ this is the only thing returned
     });
 
   } catch (err) {
@@ -359,6 +358,8 @@ const verifyUser = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
 
 
 const manualactvateuser = async (req, res) => {
@@ -386,6 +387,7 @@ const manualactvateuser = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 const activateUserAfterPayment = async (req, res) => {
   try {
     const { email, reference } = req.body;
