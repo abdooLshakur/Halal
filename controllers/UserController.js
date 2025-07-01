@@ -239,6 +239,7 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+
 // Get single user by ID
 const getsingleUser = (req, res) => {
   const id = req.params.id;
@@ -335,6 +336,7 @@ const updateUser = async (req, res) => {
   }
 };
 
+
 const verifyUser = async (req, res) => {
   try {
     const token = req.cookies.token;
@@ -342,8 +344,12 @@ const verifyUser = async (req, res) => {
       return res.status(401).json({ error: "Unauthorized: No token provided" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
     const user = await Users.findOne({ email: decoded.email });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     res.json({ activated: user.isVerified, email: user.email });
   } catch (err) {
