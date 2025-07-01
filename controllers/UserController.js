@@ -158,7 +158,7 @@ const loginUser = async (req, res) => {
       secure: isProduction,
       sameSite: isProduction ? "None" : "Lax",
       maxAge: 2 * 24 * 60 * 60 * 1000,
-      ...(isProduction && { domain: ".halalmatchmakings.com" }), 
+      ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
     };
 
     const cookieOptionsUser = {
@@ -336,28 +336,54 @@ const updateUser = async (req, res) => {
   }
 };
 
-
 const verifyUser = async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized: No token provided" });
+    // Step 1: Check if 'user' cookie exists
+    const userCookie = req.cookies.user;
+    if (!userCookie) {
+      console.warn("No user cookie found in request");
+      return res.status(401).json({ error: "Unauthorized: No user cookie found" });
     }
 
-    const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const user = await Users.findOne({ email: decoded.email });
+    console.log("Raw user cookie:", userCookie);
 
+    // Step 2: Try to parse the cookie
+    let parsedUser;
+    try {
+      parsedUser = JSON.parse(userCookie);
+    } catch (parseError) {
+      console.error("Failed to parse user cookie:", parseError);
+      return res.status(400).json({ error: "Malformed user cookie" });
+    }
+
+    // Step 3: Validate necessary fields
+    if (!parsedUser.email) {
+      console.warn("Parsed user does not contain an email:", parsedUser);
+      return res.status(400).json({ error: "Invalid user data in cookie (missing email)" });
+    }
+
+    console.log("Parsed user from cookie:", parsedUser);
+
+    // Step 4: Look up user by email
+    const user = await Users.findOne({ email: parsedUser.email });
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      console.warn(`No user found in DB with email: ${parsedUser.email}`);
+      return res.status(404).json({ error: "User not found in database" });
     }
 
-    res.json({ activated: user.isVerified, email: user.email });
+    console.log(`User found: ${user.email}, verified: ${user.isVerified}`);
+
+    // Step 5: Return verification status
+    res.json({
+      activated: user.isVerified,
+      email: user.email,
+    });
+
   } catch (err) {
-    console.error("checkactivation error:", err);
+    console.error("checkactivation unexpected error:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 
 const manualactvateuser = async (req, res) => {
   try {
@@ -384,7 +410,6 @@ const manualactvateuser = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 const activateUserAfterPayment = async (req, res) => {
   try {
     const { email, reference } = req.body;
