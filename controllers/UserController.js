@@ -117,32 +117,6 @@ const loginUser = async (req, res) => {
 
 
 
-    // // Set user cookie with basic user info
-    // const safeUser = {
-    //   id: user._id,
-    //   name: user.first_name + " " + user.last_name,
-    //   email: user.email,
-    //   avatar: user.avatar,
-    // };
-
-    // // Set token cookie
-    // res.cookie("token", token, {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: "None",
-    //   domain: ".halalmatchmakings.com",  // ✅ Add this
-    //   maxAge: 2 * 24 * 60 * 60 * 1000,
-    // });
-
-    // // Set user cookie
-    // res.cookie("user", JSON.stringify(safeUser), {
-    //   httpOnly: false,
-    //   secure: true,
-    //   sameSite: "None",
-    //   domain: ".halalmatchmakings.com",  // ✅ Add this
-    //   maxAge: 2 * 24 * 60 * 60 * 1000,
-    // });
-
     // Set user cookie with basic user info
     const safeUser = {
       id: user._id,
@@ -151,27 +125,53 @@ const loginUser = async (req, res) => {
       avatar: user.avatar,
     };
 
-    const isProduction = process.env.NODE_ENV === "production";
-
-    const cookieOptionsToken = {
+    // Set token cookie
+    res.cookie("token", token, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
+      secure: true,
+      sameSite: "None",
+      domain: ".halalmatchmakings.com",  // ✅ Add this
       maxAge: 2 * 24 * 60 * 60 * 1000,
-      ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
-    };
+    });
 
-    const cookieOptionsUser = {
+    // Set user cookie
+    res.cookie("user", JSON.stringify(safeUser), {
       httpOnly: false,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
+      secure: true,
+      sameSite: "None",
+      domain: ".halalmatchmakings.com",  // ✅ Add this
       maxAge: 2 * 24 * 60 * 60 * 1000,
-      ...(isProduction && { domain: ".halalmatchmakings.com" }),
-    };
+    });
 
-    // Set cookies
-    res.cookie("token", token, cookieOptionsToken);
-    res.cookie("user", JSON.stringify(safeUser), cookieOptionsUser);
+    // Set user cookie with basic user info
+    // const safeUser = {
+    //   id: user._id,
+    //   name: user.first_name + " " + user.last_name,
+    //   email: user.email,
+    //   avatar: user.avatar,
+    // };
+
+    // const isProduction = process.env.NODE_ENV === "production";
+
+    // const cookieOptionsToken = {
+    //   httpOnly: true,
+    //   secure: isProduction,
+    //   sameSite: isProduction ? "None" : "Lax",
+    //   maxAge: 2 * 24 * 60 * 60 * 1000,
+    //   ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
+    // };
+
+    // const cookieOptionsUser = {
+    //   httpOnly: false,
+    //   secure: isProduction,
+    //   sameSite: isProduction ? "None" : "Lax",
+    //   maxAge: 2 * 24 * 60 * 60 * 1000,
+    //   ...(isProduction && { domain: ".halalmatchmakings.com" }),
+    // };
+
+    // // Set cookies
+    // res.cookie("token", token, cookieOptionsToken);
+    // res.cookie("user", JSON.stringify(safeUser), cookieOptionsUser);
 
 
     res.json({
