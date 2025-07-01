@@ -345,10 +345,6 @@ const verifyUser = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await Users.findOne({ email: decoded.email });
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
     res.json({ activated: user.isVerified, email: user.email });
   } catch (err) {
     console.error("checkactivation error:", err);
