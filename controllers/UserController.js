@@ -239,7 +239,6 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-
 // Get single user by ID
 const getsingleUser = (req, res) => {
   const id = req.params.id;
@@ -263,6 +262,21 @@ const getsingleUser = (req, res) => {
       });
     });
 };
+
+const getAvatar = async (req, res) => {
+  const { userId } = req.params;
+  const viewerId = req.user.id;
+
+  const user = await User.findById(userId);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  if (!user.allowedViewers.includes(viewerId)) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  res.json({ avatar: user.avatar });
+};
+
 
 // Update user info
 const updateUser = async (req, res) => {
@@ -358,9 +372,6 @@ const verifyUser = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
-
 
 const manualactvateuser = async (req, res) => {
   try {
@@ -624,6 +635,7 @@ module.exports = {
   getAllUsers,
   getsingleUser,
   resetPassword,
+  getAvatar,
   requestPasswordReset,
   updateUser,
   contactUs,

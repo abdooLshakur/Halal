@@ -20,7 +20,7 @@ const createNotification = async (req, res) => {
     const notification = await Notification.create({
       sender,
       recipient,
-      type,  // Dynamically use the type from the request
+      type,
       message,
     });
 
@@ -56,7 +56,6 @@ const getAllNotifications = async (req, res) => {
   try {
     const { type } = req.query;
 
-    // Build query object
     const query = {
       $or: [
         { recipient: req.user._id },
@@ -64,14 +63,13 @@ const getAllNotifications = async (req, res) => {
       ]
     };
 
-    // If type is provided, add it to the query filter
     if (type) {
       query.type = type;
     }
 
-    // Get notifications from DB
     const notifications = await Notification.find(query)
-      .sort({ createdAt: -1 });  // Sort by newest first
+      .sort({ createdAt: -1 })
+      .populate('sender', 'first_name last_name'); // ✅ include sender's full name
 
     res.status(200).json({
       success: true,
@@ -120,9 +118,10 @@ const updateNotificationStatus = async (req, res) => {
       // 💡 Add avatar access if it's an image request and accepted
       if (action === 'accepted' && notification.type === 'image') {
         await User.findByIdAndUpdate(notification.recipient, {
-          $addToSet: { avatarAccessGrantedTo: notification.sender }
+          $addToSet: { approvedViewers: notification.sender }
         });
       }
+
     }
 
 
