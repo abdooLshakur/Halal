@@ -17,7 +17,7 @@ router.post("/contactus", contactUs);
 router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updateUser);
 router.get('/users', getAllUsers);
 router.get('/:userId/avatar', authenticateToken, serveAvatar);
-router.get('/:userId/avatar', authenticateToken, getAvatar); // 🔐 Protected
+router.post('/users/avatars', authenticateToken, getAvatar); // 🔐 Protected
 router.get('/user/:id',  authenticateToken,getsingleUser);
 router.get('/activate-user/:userId', authenticateToken, manualactvateuser);
 router.delete('/delete-user/:id',  authenticateToken,deleteUser);

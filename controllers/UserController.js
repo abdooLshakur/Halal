@@ -100,7 +100,7 @@ const loginUser = async (req, res) => {
     const user = await Users.findOne({ email });
 
     if (!user) {
-      return res.json({ success: false, message: "User not found" });
+      return res.json({ success: false, message: "account does not exist or invalid credentials" });
     }
 
 
@@ -264,17 +264,30 @@ const getsingleUser = (req, res) => {
 };
 
 const getAvatar = async (req, res) => {
-  const { userId } = req.params;
-  const viewerId = req.user.id;
+ const viewerId = req.user._id;
+  const { userIds } = req.body; // Expecting array of userIds
 
-  const user = await User.findById(userId);
-  if (!user) return res.status(404).json({ message: "User not found" });
-
-  if (!user.allowedViewers.includes(viewerId)) {
-    return res.status(403).json({ message: "Access denied" });
+  if (!Array.isArray(userIds)) {
+    return res.status(400).json({ message: 'userIds must be an array' });
   }
 
-  res.json({ avatar: user.avatar });
+  try {
+    // Fetch users who have approved the viewer
+    const approvedUsers = await Users.find({
+      _id: { $in: userIds },
+      approvedViewers: { $in: [viewerId] }
+    }).select('_id avatar');
+
+    const avatarMap = approvedUsers.reduce((acc, user) => {
+      acc[user._id] = user.avatar || null;
+      return acc;
+    }, {});
+
+    return res.status(200).json({ avatars: avatarMap });
+  } catch (error) {
+    console.error('Error fetching avatars:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
 };
 
 
