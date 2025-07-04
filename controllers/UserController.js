@@ -264,7 +264,7 @@ const getsingleUser = (req, res) => {
 };
 
 const getAvatar = async (req, res) => {
- const viewerId = req.user._id;
+  const viewerId = req.user._id;
   const { userIds } = req.body; // Expecting array of userIds
 
   if (!Array.isArray(userIds)) {
@@ -290,52 +290,71 @@ const getAvatar = async (req, res) => {
   }
 };
 
-
-// Update user info
 const updateUser = async (req, res) => {
   try {
     const id = req.params.id;
     const avatarpath = req.file ? req.file.path : undefined;
+    const nickname = req.body.nickname?.trim();
+
+    // ✅ 1. Check if nickname is provided and unique (excluding current user)
+    if (nickname) {
+      const existing = await Users.findOne({ nickname, _id: { $ne: id } });
+      if (existing) {
+        return res.status(400).json({ success: false, message: "Nickname already in use by another user" });
+      }
+    }
 
     const updatedFields = {
+      first_name: req.body.first_name,
+      last_name: req.body.last_name,
+      email: req.body.email,
+      age: req.body.age,
+      gender: req.body.gender,
       numberOfKids: req.body.numberOfKids,
-      numberOfWives: req.body.numberOfWives,
       location: req.body.location,
-      stateOfOrigin: req.body.stateOfOrigin,
-      ethnicity: req.body.ethnicity,
-      height: req.body.height,
-      weight: req.body.weight,
-      genotype: req.body.genotype,
+      maritalStatus: req.body.maritalStatus,
+      hobbies: req.body.hobbies,
+      bio: req.body.bio,
       bloodGroup: req.body.bloodGroup,
       complexion: req.body.complexion,
-      qualification: req.body.qualification,
+      dealBreakers: req.body.dealBreakers,
+      ethnicity: req.body.ethnicity,
+      genotype: req.body.genotype,
+      height: req.body.height,
+      numberOfWives: req.body.numberOfWives,
+      physicalChallenges: req.body.physicalChallenges,
+      pledgeAccepted: req.body.pledgeAccepted,
       profession: req.body.profession,
-      hobbies: req.body.hobbies,
+      qualification: req.body.qualification,
       religiousLevel: req.body.religiousLevel,
       spouseQualities: req.body.spouseQualities,
-      preferredSpouseTraits: req.body.preferredSpouseTraits,
-      dealBreakers: req.body.dealBreakers,
-      physicalChallenges: req.body.physicalChallenges,
-      marriageIntentDuration: req.body.marriageIntentDuration,
-      pledgeAccepted: req.body.pledgeAccepted,
-      phone: req.body.phone,
-      bio: req.body.bio,
+      stateOfOrigin: req.body.stateOfOrigin,
+      weight: req.body.weight,
+      nickname: req.body.nickname?.trim() , 
     };
+
+    console.log("Updating user with fields:", updatedFields);
 
     if (avatarpath) {
       updatedFields.avatar = avatarpath;
     }
 
+    // ✅ 3. Update user
     const updatedUser = await Users.findByIdAndUpdate(
       id,
       { $set: updatedFields },
-      { new: true }
+      { new: true, runValidators: true }
     );
+    console.log("Nickname received:", req.body.nickname);
+    console.log("All fields received:", req.body);
 
     if (!updatedUser) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
+    console.log("Updated user doc:", updatedUser);
 
+
+    // ✅ 4. Update cookie
     const userCookieData = {
       id: updatedUser._id,
       name: `${updatedUser.first_name} ${updatedUser.last_name}`,
@@ -349,19 +368,23 @@ const updateUser = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: "User profile updated successfully",
+      data: updatedUser,
     });
+
   } catch (err) {
     console.error("Update error:", err);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to update user",
       error: err.message,
     });
   }
 };
+
+
 
 const verifyUser = async (req, res) => {
   try {
