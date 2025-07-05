@@ -6,38 +6,52 @@ const User = require('../models/UserModel');
 // Auto-create matches from accepted interests
 const autoCreateMatch = async (req, res) => {
   try {
+    // Find accepted interest requests that haven't been used to create a match yet
     const acceptedNotifications = await Notification.find({
       type: 'interest',
-      status: 'accepted'
-    }).populate('sender recipient');
+      status: 'accepted',
+      matchCreated: { $ne: true } // new field
+    });
 
     for (const notification of acceptedNotifications) {
       const { sender, recipient } = notification;
 
-      // Normalize order for uniqueness
-      const senderId = sender._id.toString();
-      const recipientId = recipient._id.toString();
+      // Normalize IDs
+      const senderId = sender.toString();
+      const recipientId = recipient.toString();
+
       const [user1, user2] = senderId < recipientId
-        ? [sender._id, recipient._id]
-        : [recipient._id, sender._id];
+        ? [sender, recipient]
+        : [recipient, sender];
 
-      // Avoid duplicate matches
-      const existingMatch = await Match.findOne({ user1, user2 });
-      if (existingMatch) continue;
+      // Check for existing match regardless of user order
+      const existingMatch = await Match.findOne({
+        $or: [
+          { user1, user2 },
+          { user1: user2, user2: user1 }
+        ]
+      });
 
+      if (existingMatch) {
+        // Optionally mark notification to avoid reprocessing again
+        notification.matchCreated = true;
+        await notification.save();
+        continue;
+      }
+
+      // Create the match
       await Match.create({ user1, user2 });
 
-      const notificationData = {
-        type: 'interest_response',
-        message: 'You’ve been matched! Contact info will be shared once approved.',
-      };
+      // Create notification for both users
+      const message = 'You’ve been matched! Contact info will be shared once approved.';
+      await Notification.create({ recipient: sender, sender: recipient, type: 'interest_response', message });
+      await Notification.create({ recipient: recipient, sender: sender, type: 'interest_response', message });
 
-      // Notify both users
-      await Notification.create({ recipient: sender._id, sender: recipient._id, ...notificationData });
-      await Notification.create({ recipient: recipient._id, sender: sender._id, ...notificationData });
+      // Mark original interest notification as "matchCreated"
+      notification.matchCreated = true;
+      await notification.save();
 
-      // Log with full names
-      console.log(`Match created between ${sender.first_name} ${sender.last_name} and ${recipient.first_name} ${recipient.last_name}`);
+      console.log(`Matched: ${senderId} + ${recipientId}`);
     }
 
     res.status(200).json({ success: true, message: 'Matches processed successfully.' });
@@ -46,7 +60,6 @@ const autoCreateMatch = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 const shareContactInfo = async (req, res) => {
   try {
@@ -105,7 +118,6 @@ const shareContactInfo = async (req, res) => {
   }
 };
 
-// Get matches for the logged-in user
 const getAllMatches = async (req, res) => {
   try {
     const matches = await Match.find()

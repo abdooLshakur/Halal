@@ -1,5 +1,6 @@
 const Notification = require('../models/notification');
 const User = require('../models/UserModel');
+const Match = require('../models/MatchModel');
 
 // Create a new Notification (Submit Interest)
 const createNotification = async (req, res) => {
@@ -31,6 +32,72 @@ const createNotification = async (req, res) => {
   } catch (error) {
     console.error('Error creating notification:', error);
     res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+const fixMatchesOverGet = async (req, res) => {
+  try {
+    const acceptedNotifications = await Notification.find({
+      type: 'interest',
+      status: 'accepted',
+      matchCreated: { $ne: true }, // Optional: avoid reprocessing
+    });
+
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    for (const notification of acceptedNotifications) {
+      const senderId = notification.sender.toString();
+      const recipientId = notification.recipient.toString();
+
+      // Ensure consistent ordering
+      const [user1, user2] = senderId < recipientId
+        ? [senderId, recipientId]
+        : [recipientId, senderId];
+
+      // Check if match already exists
+      const matchExists = await Match.findOne({ user1, user2 });
+      if (matchExists) {
+        skippedCount++;
+        notification.matchCreated = true; // mark so it's skipped next time
+        await notification.save();
+        continue;
+      }
+
+      // Create new match
+      await Match.create({ user1, user2 });
+
+      const message = 'You’ve been matched! Contact info will be shared once approved.';
+
+      // Notify both users
+      await Notification.create({
+        recipient: senderId,
+        sender: recipientId,
+        type: 'interest_response',
+        message,
+      });
+
+      await Notification.create({
+        recipient: recipientId,
+        sender: senderId,
+        type: 'interest_response',
+        message,
+      });
+
+      // Mark original notification to avoid reprocessing
+      notification.matchCreated = true;
+      await notification.save();
+
+      createdCount++;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Finished processing. ${createdCount} new matches created, ${skippedCount} skipped.`,
+    });
+  } catch (error) {
+    console.error('Error in fixMatchesOverGet:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
@@ -165,9 +232,11 @@ const deleteNotification = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
 module.exports = {
   createNotification,
   getAllNotifications,
+  fixMatchesOverGet,
   updateNotificationStatus,
   getApprovedImageRequests,
   deleteNotification,
