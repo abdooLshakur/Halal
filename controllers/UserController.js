@@ -384,8 +384,6 @@ const updateUser = async (req, res) => {
   }
 };
 
-
-
 const verifyUser = async (req, res) => {
   try {
     const { email } = req.body;
