@@ -540,13 +540,14 @@ const requestPasswordReset = async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
-
+    
     res.status(200).json({
       message: "Reset link sent to your email",
       token,
       email,
     });
   } catch (error) {
+    console.error("Error in requestPasswordReset:", error.message, error.stack);
     console.error("Error in requestPasswordReset:", error);
     res.status(500).json({ message: "Server error" });
   }

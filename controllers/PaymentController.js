@@ -10,7 +10,7 @@ exports.initiateBankTransfer = async (req, res) => {
     const response = await paystack.post('/transaction/initialize', {
       email,
       amount: amountInKobo,
-      callback_url: 'http://localhost:3000/payment/callback',
+      callback_url: 'https://www.halalmatchmakings.com//payment/callback',
       channels: ['bank'],
       metadata: {
         custom_fields: [

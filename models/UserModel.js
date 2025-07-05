@@ -42,12 +42,7 @@ const UserSchema = new Schema({
 
   marriageIntentDuration: {
     type: String,
-    enum: [
-      "Less than 3 months",
-      "In 3 to 6 months",
-      "Less than a year",
-      "More than a year"
-    ]
+   
   }, // NEW
 
   pledgeAccepted: { type: Boolean, default: false, }, // NEW
