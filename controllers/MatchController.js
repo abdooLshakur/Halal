@@ -121,8 +121,8 @@ const shareContactInfo = async (req, res) => {
 const getAllMatches = async (req, res) => {
   try {
     const matches = await Match.find()
-      .populate('user1', 'first_name last_name email')
-      .populate('user2', 'first_name last_name email');
+      .populate('user1', 'first_name last_name phone email')
+      .populate('user2', 'first_name last_name phone email');
 
     res.status(200).json({ success: true, matches });
   } catch (error) {
