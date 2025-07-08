@@ -25,22 +25,35 @@ if (!dbUrl || !SECRET_KEY) {
 
 // Middleware
 const allowedOrigins = [
-  "https://www.halalmatchmakings.com",
-  'https://www.halalmatchmakings.com',
-  "https://halalmatchmakings.com",
   "http://localhost:3000",
+  "https://halalmatchmakings.com",
+  "https://www.halalmatchmakings.com",
 ];
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn("Blocked by CORS:", origin);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
 
-// Handle preflight requests
 app.options('*', cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn("Blocked OPTIONS by CORS:", origin);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
+
 
 app.use(cookieParser());
 app.use(express.json({ limit: "5mb" }));
