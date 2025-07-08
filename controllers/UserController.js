@@ -296,7 +296,6 @@ const updateUser = async (req, res) => {
     const avatarpath = req.file ? req.file.path : undefined;
     const nickname = req.body.nickname?.trim();
 
-    // ✅ 1. Check if nickname is provided and unique (excluding current user)
     if (nickname) {
       const existing = await Users.findOne({ nickname, _id: { $ne: id } });
       if (existing) {
@@ -333,28 +332,22 @@ const updateUser = async (req, res) => {
       nickname: req.body.nickname?.trim() , 
     };
 
-    console.log("Updating user with fields:", updatedFields);
-
+    
     if (avatarpath) {
       updatedFields.avatar = avatarpath;
     }
 
-    // ✅ 3. Update user
     const updatedUser = await Users.findByIdAndUpdate(
       id,
       { $set: updatedFields },
       { new: true, runValidators: true }
     );
-    console.log("Nickname received:", req.body.nickname);
-    console.log("All fields received:", req.body);
 
     if (!updatedUser) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    console.log("Updated user doc:", updatedUser);
 
 
-    // ✅ 4. Update cookie
     const userCookieData = {
       id: updatedUser._id,
       name: `${updatedUser.first_name} ${updatedUser.last_name}`,
@@ -398,7 +391,7 @@ const verifyUser = async (req, res) => {
     }
 
     return res.status(200).json({
-      activated: user.isVerified, // ✅ this is the only thing returned
+      activated: user.isVerified, 
     });
 
   } catch (err) {
@@ -553,7 +546,6 @@ const requestPasswordReset = async (req, res) => {
   }
 };
 
-// Reset Password Controller
 const resetPassword = async (req, res) => {
   try {
     const { token, email, newPassword } = req.body;
@@ -633,16 +625,25 @@ const contactUs = async (req, res) => {
 };
 
 
-// Logout user — clear cookies
 const logoutUser = (req, res) => {
-  res.clearCookie("token");
-  res.clearCookie("userAvatar");
-  res.json({
-    success: true,
-    message: "Logged out successfully",
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    domain: ".halalmatchmakings.com",
+    path: "/",
   });
-};
 
+  res.clearCookie("user", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    domain: ".halalmatchmakings.com",
+    path: "/",
+  });
+
+  return res.status(200).json({ message: "Logged out successfully" });
+};
 
 // Delete user by ID
 const deleteUser = (req, res) => {
