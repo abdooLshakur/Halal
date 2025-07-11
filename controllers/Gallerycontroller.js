@@ -1,24 +1,40 @@
 const Gallerys = require("../models/Gallery");
 
-const CreateGallery = async(req, res) => {
-    try {
-      const { gallery_header, gallery_location,} = req.body;
-      const Gallerypath = req.file ? req.file.path : null;
+const CreateGallery = async (req, res) => {
+  try {
+    const { gallery_header, gallery_location, gallery_description } = req.body;
 
-        const New_Gallery = { gallery_img:Gallerypath, gallery_header, gallery_location,};
-        const Gallery = await new Gallerys(New_Gallery).save();
-        res.json({
-            success: true,
-            message: "Gallery created Successfully",
-            data: Gallery
-        });
-    } catch (err) {
-        res.json({
-            success: false,
-            message: "Failed to create Gallery",
-            error: err.message,
-        })
+    const files = req.files; // Expecting multiple files
+    if (!files || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one image is required",
+      });
     }
+
+    const gallery_imgs = files.map(file => file.path);
+
+    const New_Gallery = {
+      gallery_imgs,
+      gallery_header,
+      gallery_location,
+      gallery_description,
+    };
+
+    const Gallery = await new Gallerys(New_Gallery).save();
+
+    res.json({
+      success: true,
+      message: "Gallery created successfully",
+      data: Gallery,
+    });
+  } catch (err) {
+    res.json({
+      success: false,
+      message: "Failed to create gallery",
+      error: err.message,
+    });
+  }
 };
 
 const getAllGallery = (req, res) => {
@@ -42,36 +58,37 @@ const getAllGallery = (req, res) => {
 
 
 const updateGallery = async (req, res) => {
-    try {
-      const id = req.params.id;
-      const Gallerypath = req.file?.path;
-  
-      const updateData = {
-        gallery_header: req.body.gallery_header,
-        gallery_location: req.body.gallery_location,
-      };
-  
-      if (Gallerypath) {
-        updateData.gallery_img = Gallerypath;
-      }
-  
-      const updatedGallery = await Gallerys.findByIdAndUpdate(id, updateData, { new: true });
-  
-      res.json({
-        success: true,
-        message: "Gallery Updated Successfully",
-        data: updatedGallery,
-      });
-  
-    } catch (err) {
-      res.json({
-        success: false,
-        message: "Failed to Update Gallery",
-        error: err.message,
-      });
+  try {
+    const id = req.params.id;
+    const newFiles = req.files;
+
+    const updateData = {
+      gallery_header: req.body.gallery_header,
+      gallery_location: req.body.gallery_location,
+      gallery_description: req.body.gallery_description,
+    };
+
+    if (newFiles && newFiles.length > 0) {
+      updateData.gallery_imgs = newFiles.map(file => file.path);
     }
-  };
-  
+
+    const updatedGallery = await Gallerys.findByIdAndUpdate(id, updateData, { new: true });
+
+    res.json({
+      success: true,
+      message: "Gallery updated successfully",
+      data: updatedGallery,
+    });
+
+  } catch (err) {
+    res.json({
+      success: false,
+      message: "Failed to update gallery",
+      error: err.message,
+    });
+  }
+};
+ 
 
 
 const deleteGallery = (req, res) => {
