@@ -4,7 +4,6 @@ const upload = require("../middleware/Fileuploads")
 const authenticateToken = require('../middleware/Auth');
 
 const {CreateUser, loginUser, getsingleUser, getAllUsers, getAvatar, updateUser, deleteUser, requestPasswordReset, resetPassword, contactUs, verifyUser, activateUserAfterPayment, manualactvateuser, logoutUser} = require("../controllers/UserController");
-const { serveAvatar } = require("../controllers/ServeAvatar");
 
 router.post("/register-User", upload.single('avatar'), CreateUser);
 router.post("/user-login", loginUser);
