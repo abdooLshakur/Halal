@@ -4,7 +4,7 @@ const cloudinary = require("../utils/Cloudinary");
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "halal_uploads", // Optional folder in Cloudinary
+    folder: "halal_uploads", 
     allowed_formats: ["jpg", "jpeg", "png", "webp", "avif"],
     transformation: [{ width: 500, height: 500, crop: "limit" }],
   },

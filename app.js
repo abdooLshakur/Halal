@@ -6,7 +6,6 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 
 const UserRoutes = require("./routes/Userroutes");
-const Imagerequest = require("./routes/Imagerequest");
 const Intresetroutes = require("./routes/Interestroutes");
 const notification = require('./routes/Ntificationroutes');
 const MatchRoute = require('./routes/MacthRoute');
@@ -56,7 +55,7 @@ app.options('*', cors({
 
 
 app.use(cookieParser());
-app.use(express.json({ limit: "5mb" }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Database connection
@@ -71,7 +70,6 @@ app.get("/", (req, res) => {
 app.use(AdminRoute);
 app.use(UserRoutes);
 app.use(Intresetroutes);
-// app.use(Imagerequest);
 app.use(notification);
 app.use(MatchRoute);
 app.use(Galleryroutes);
