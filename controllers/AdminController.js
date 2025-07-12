@@ -119,16 +119,26 @@ const loginAdmin = async (req, res) => {
       avatar: Admin.avatar,
     };
 
-    const cookieConfig = {
+   
+    const cookieOptionsToken = {
       httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com",
-      maxAge: 4 * 60 * 60 * 1000,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+      ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
     };
 
-    res.cookie("token", token, cookieConfig);
-    res.cookie("Admin", JSON.stringify(safeAdmin), cookieConfig);
+    const cookieOptionsUser = {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+      ...(isProduction && { domain: ".halalmatchmakings.com" }),
+    };
+
+
+    res.cookie("token", token, cookieOptionsToken);
+    res.cookie("Admin", JSON.stringify(safeAdmin), cookieOptionsUser);
 
     res.json({
       success: true,
