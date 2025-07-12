@@ -119,7 +119,8 @@ const loginAdmin = async (req, res) => {
       avatar: Admin.avatar,
     };
 
-   
+    const isProduction = process.env.NODE_ENV === "production";
+
     const cookieOptionsToken = {
       httpOnly: true,
       secure: isProduction,

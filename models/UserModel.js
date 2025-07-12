@@ -12,7 +12,7 @@ const UserSchema = new Schema({
   },
   email: { type: String, required: true, unique: true, },
   password: { type: String, required: true },
-  phone: { type: String, required: true },
+  phone: { type: String,  },
   age: { type: String },
   gender: { type: String, required: true, enum: ['Male', 'Female'] },
   numberOfKids: { type: String, default: 0 },
