@@ -11,7 +11,7 @@ exports.initiateBankTransfer = async (req, res) => {
       email,
       amount: amountInKobo,
       callback_url: 'http://localhost:8000/payment/callback',
-      channels: ['bank'],
+      channels: ['bank'], 
       metadata: {
         custom_fields: [
           {

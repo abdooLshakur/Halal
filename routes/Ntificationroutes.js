@@ -1,6 +1,6 @@
 const express = require('express');
 const authenticateToken = require("../middleware/Auth")
-const { createNotification,fixMatchesOverGet, getAllNotifications, deleteNotification, updateNotificationStatus,getApprovedImageRequests } = require('../controllers/Notification.js');
+const { createNotification, fixMatchesOverGet, getAllNotifications, deleteNotification, updateNotificationStatus, getApprovedImageRequests, getUnreadCount, markAllAsRead } = require('../controllers/Notification.js');
 const Protected = require('../middleware/Aminauth');
 
 const router = express.Router();
@@ -13,10 +13,12 @@ router.get('/getAllNotifications', authenticateToken, getAllNotifications);
 
 // Get all Approved image request
 router.get('/approvedimagerequests', authenticateToken, getApprovedImageRequests);
-
 router.get('/admin/fix-matches/:adminId', Protected, fixMatchesOverGet);
-
-// update notification
+// Get unread count
+router.get("/unread-count", authenticateToken, getUnreadCount);
+// Mark all as read
+router.put("/mark-read", authenticateToken, markAllAsRead);
+// update notification 
 router.put('/updateNotificationStatus/:notificationId', authenticateToken, updateNotificationStatus);
 
 // Delete a Notification

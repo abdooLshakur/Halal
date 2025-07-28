@@ -118,7 +118,7 @@ const getApprovedImageRequests = async (req, res) => {
   }
 };
 
-// Get All Notifications for Logged-in User
+// ✅ Get All Notifications for Logged-in User
 const getAllNotifications = async (req, res) => {
   try {
     const { type } = req.query;
@@ -136,7 +136,7 @@ const getAllNotifications = async (req, res) => {
 
     const notifications = await Notification.find(query)
       .sort({ createdAt: -1 })
-      .populate('sender', 'first_name last_name'); // ✅ include sender's full name
+      .populate('sender', 'first_name last_name'); // ✅ include sender's name
 
     res.status(200).json({
       success: true,
@@ -147,6 +147,43 @@ const getAllNotifications = async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+// ✅ Get Unread Count for Logged-in User
+const getUnreadCount = async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({
+      recipient: req.user._id,
+      isRead: false,
+    });
+
+    res.status(200).json({
+      success: true,
+      unreadCount: count,
+    });
+  } catch (error) {
+    console.error('Error fetching unread count:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// ✅ Mark All Notifications as Read for Logged-in User
+const markAllAsRead = async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { recipient: req.user._id, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'All notifications marked as read',
+    });
+  } catch (error) {
+    console.error('Error marking notifications as read:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
 
 const updateNotificationStatus = async (req, res) => {
   try {
@@ -240,4 +277,6 @@ module.exports = {
   updateNotificationStatus,
   getApprovedImageRequests,
   deleteNotification,
+  markAllAsRead,
+  getUnreadCount,
 };

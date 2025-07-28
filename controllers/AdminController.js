@@ -3,7 +3,6 @@ const Admins = require("../models/AdminModel");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 
-// Create a new Admin
 const CreateAdmin = async (req, res) => {
   try {
     const {
@@ -20,7 +19,6 @@ const CreateAdmin = async (req, res) => {
 
     console.log("📥 Incoming signup request:", req.body);
 
-    // === Required Field Check ===
     if (!first_name || !last_name || !email || !password || !gender || !age) {
       return res.status(400).json({
         success: false,
@@ -28,7 +26,6 @@ const CreateAdmin = async (req, res) => {
       });
     }
 
-    // === Age Validation ===
     const isValidAge = /^\d+$/.test(age) && parseInt(age) >= 18;
     if (!isValidAge) {
       return res.status(400).json({
@@ -37,7 +34,6 @@ const CreateAdmin = async (req, res) => {
       });
     }
 
-    // === Email Uniqueness Check ===
     const existingAdmin = await Admins.findOne({ email: email.trim().toLowerCase() });
     if (existingAdmin) {
       return res.status(409).json({
@@ -46,20 +42,17 @@ const CreateAdmin = async (req, res) => {
       });
     }
 
-    // === Optional File Upload (avatar) ===
     const avatar = req.file ? req.file.path : '';
 
-    // === Hash the Password ===
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // === Create New Admin ===
     const newAdmin = new Admins({
       first_name: first_name.trim(),
       last_name: last_name.trim(),
       email: email.trim().toLowerCase(),
       phone: phone.trim(),
       password: hashedPassword,
-      age: age.trim(), // or use parseInt(age) if model is changed
+      age: age.trim(),
       gender: gender.trim(),
       location: location.trim(),
       stateOfOrigin: stateOfOrigin.trim(),
@@ -88,7 +81,6 @@ const CreateAdmin = async (req, res) => {
   }
 };
 
-// Login Admin
 const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
