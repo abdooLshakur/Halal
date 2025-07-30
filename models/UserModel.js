@@ -16,7 +16,7 @@ const UserSchema = new Schema({
   age: { type: String },
   gender: { type: String, required: true, enum: ['Male', 'Female'] },
   numberOfKids: { type: String, default: 0 },
-  numberOfWives: { type: Number, default: 0 }, // NEW
+  numberOfWives: { type: Number, default: 0 }, 
 
   location: { type: String },
   stateOfOrigin: { type: String },
@@ -35,7 +35,7 @@ const UserSchema = new Schema({
 
   religiousLevel: { type: String },
   spouseQualities: { type: String },
-  preferredSpouseTraits: { type: String }, // NEW
+  preferredSpouseTraits: { type: String }, 
   dealBreakers: { type: String },
   physicalChallenges: { type: String },
   bio: { type: String },
@@ -43,9 +43,9 @@ const UserSchema = new Schema({
   marriageIntentDuration: {
     type: String,
    
-  }, // NEW
+  }, 
 
-  pledgeAccepted: { type: Boolean, default: false, }, // NEW
+  pledgeAccepted: { type: Boolean, default: false, }, 
 
   avatar: { type: String, default: '' },
   avatarAccessGrantedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
@@ -54,6 +54,7 @@ const UserSchema = new Schema({
   isVerified: { type: Boolean, default: false },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
+  deleted:{type:Boolean, default:false},
   createdAt: { type: Date, default: Date.now }
 });
 

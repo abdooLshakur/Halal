@@ -115,34 +115,6 @@ const loginUser = async (req, res) => {
       { expiresIn: '2d' }
     );
 
-
-
-    // // Set user cookie with basic user info
-    // const safeUser = {
-    //   id: user._id,
-    //   name: user.first_name + " " + user.last_name,
-    //   email: user.email,
-    //   avatar: user.avatar,
-    // };
-
-    // // Set token cookie
-    // res.cookie("token", token, {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: "None",
-    //   domain: ".halalmatchmakings.com",  // ✅ Add this
-    //   maxAge: 2 * 24 * 60 * 60 * 1000,
-    // });
-
-    // // Set user cookie
-    // res.cookie("user", JSON.stringify(safeUser), {
-    //   httpOnly: false,
-    //   secure: true,
-    //   sameSite: "None",
-    //   domain: ".halalmatchmakings.com",  // ✅ Add this
-    //   maxAge: 2 * 24 * 60 * 60 * 1000,
-    // });
-
     // Set user cookie with basic user info
     const safeUser = {
       id: user._id,
@@ -645,25 +617,31 @@ const logoutUser = (req, res) => {
   return res.status(200).json({ message: "Logged out successfully" });
 };
 
-// Delete user by ID
-const deleteUser = (req, res) => {
-  const id = req.params.id;
+const deleteUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
 
-  Users.findByIdAndDelete(id)
-    .then(() => {
-      res.json({
-        success: true,
-        message: "User deleted successfully",
-      });
-    })
-    .catch((err) => {
-      res.json({
-        success: false,
-        message: "Failed to delete user",
-        error: err.message,
-      });
+    const updated = await Users.findByIdAndUpdate(
+      userId,
+      { deleted: true },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted',
+      notification: updated,
     });
+  } catch (error) {
+    console.error('Error deleting user :', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
+
 
 module.exports = {
   CreateUser,
