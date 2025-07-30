@@ -1,105 +1,75 @@
 const Notification = require('../models/notification');
 const User = require('../models/UserModel');
 const Match = require('../models/MatchModel');
+const mongoose = require('mongoose');
 
 // Create a new Notification (Submit Interest)
 const createNotification = async (req, res) => {
   try {
-    const sender = req.user._id;
+    const sender = req.user?._id;
     const recipient = req.params.targetUserId;
     const { message, type } = req.body;
+
+    // Basic validations
+    if (!sender) {
+      return res.status(401).json({ message: 'Sender not authenticated' });
+    }
 
     if (!recipient) {
       return res.status(400).json({ message: 'Recipient ID is required' });
     }
 
-    // Validate that type is provided in the request
     if (!type) {
       return res.status(400).json({ message: 'Notification type is required' });
+    }
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ message: 'Message is required and must be a non-empty string' });
+    }
+
+    // Optional: prevent duplicate notifications of the same type between same users
+    const existing = await Notification.findOne({ sender, recipient, type });
+    if (existing) {
+      return res.status(409).json({ message: 'Notification already exists' });
     }
 
     const notification = await Notification.create({
       sender,
       recipient,
       type,
-      message,
+      message: message.trim(),
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       notification,
     });
   } catch (error) {
     console.error('Error creating notification:', error);
-    res.status(500).json({ message: 'Server Error' });
+    return res.status(500).json({ message: 'Server Error' });
   }
 };
 
-const fixMatchesOverGet = async (req, res) => {
+const fixMatchesOverGet = async () => {
   try {
-    const acceptedNotifications = await Notification.find({
-      type: 'interest',
-      status: 'accepted',
-      matchCreated: { $ne: true }, // Optional: avoid reprocessing
+    setIsLoading(true);
+    const { data } = await axios.get(`${API}/matches`, {
+      withCredentials: true,
     });
 
-    let createdCount = 0;
-    let skippedCount = 0;
-
-    for (const notification of acceptedNotifications) {
-      const senderId = notification.sender.toString();
-      const recipientId = notification.recipient.toString();
-
-      // Ensure consistent ordering
-      const [user1, user2] = senderId < recipientId
-        ? [senderId, recipientId]
-        : [recipientId, senderId];
-
-      // Check if match already exists
-      const matchExists = await Match.findOne({ user1, user2 });
-      if (matchExists) {
-        skippedCount++;
-        notification.matchCreated = true; // mark so it's skipped next time
-        await notification.save();
-        continue;
-      }
-
-      // Create new match
-      await Match.create({ user1, user2 });
-
-      const message = 'You’ve been matched! Contact info will be shared once approved.';
-
-      // Notify both users
-      await Notification.create({
-        recipient: senderId,
-        sender: recipientId,
-        type: 'interest_response',
-        message,
-      });
-
-      await Notification.create({
-        recipient: recipientId,
-        sender: senderId,
-        type: 'interest_response',
-        message,
-      });
-
-      // Mark original notification to avoid reprocessing
-      notification.matchCreated = true;
-      await notification.save();
-
-      createdCount++;
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: `Finished processing. ${createdCount} new matches created, ${skippedCount} skipped.`,
+    const sortedMatches = (data.matches || []).sort((a, b) => {
+      return new Date(b.createdAt) - new Date(a.createdAt);
     });
-  } catch (error) {
-    console.error('Error in fixMatchesOverGet:', error);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+
+    setMatches(sortedMatches);
+  } catch (err) {
+    console.error("Error fetching matches:", err);
+    toast.error("Failed to fetch matches.");
+  } finally {
+    setIsLoading(false);
   }
 };
+
 
 const getApprovedImageRequests = async (req, res) => {
   try {
@@ -121,12 +91,18 @@ const getApprovedImageRequests = async (req, res) => {
 // ✅ Get All Notifications for Logged-in User
 const getAllNotifications = async (req, res) => {
   try {
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized: User not found' });
+    }
+
     const { type } = req.query;
 
     const query = {
       $or: [
-        { recipient: req.user._id },
-        { sender: req.user._id },
+        { recipient: userId },
+        { sender: userId },
       ]
     };
 
@@ -135,18 +111,20 @@ const getAllNotifications = async (req, res) => {
     }
 
     const notifications = await Notification.find(query)
-      .sort({ createdAt: -1 })
-      .populate('sender', 'first_name last_name'); // ✅ include sender's name
+      .sort({ createdAt: -1 }) // Newest first
+      .populate('sender', 'first_name last_name')
+      .populate('recipient', 'first_name last_name'); // Optional: add recipient name too
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       notifications,
     });
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    res.status(500).json({ message: 'Server Error' });
+    return res.status(500).json({ message: 'Server Error' });
   }
 };
+
 
 // ✅ Get Unread Count for Logged-in User
 const getUnreadCount = async (req, res) => {

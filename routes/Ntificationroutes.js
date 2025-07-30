@@ -13,6 +13,7 @@ router.get('/getAllNotifications', authenticateToken, getAllNotifications);
 
 // Get all Approved image request
 router.get('/approvedimagerequests', authenticateToken, getApprovedImageRequests);
+
 router.get('/admin/fix-matches/:adminId', Protected, fixMatchesOverGet);
 // Get unread count
 router.get("/unread-count", authenticateToken, getUnreadCount);

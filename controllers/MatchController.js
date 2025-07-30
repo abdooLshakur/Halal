@@ -53,15 +53,29 @@ const autoCreateMatch = async (req, res) => {
       await notification.save();
 
       createdCount++;
-      console.log(`Matched: ${senderId} + ${recipientId}`);
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: `Finished processing. ${createdCount} new matches created, ${skippedCount} skipped.`,
     });
   } catch (error) {
-    console.error('Error creating matches:', error);
+    console.error('Error in autoCreateMatch:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+const getAllMatches = async (req, res) => {
+  try {
+    const matches = await Match.find()
+      .sort({ createdAt: -1 }) // ⬅️ Show newest matches first
+      .populate('user1', 'first_name last_name phone email')
+      .populate('user2', 'first_name last_name phone email');
+
+    res.status(200).json({ success: true, matches });
+  } catch (error) {
+    console.error('Error fetching matches:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -123,18 +137,7 @@ const shareContactInfo = async (req, res) => {
   }
 };
 
-const getAllMatches = async (req, res) => {
-  try {
-    const matches = await Match.find()
-      .populate('user1', 'first_name last_name phone email')
-      .populate('user2', 'first_name last_name phone email');
 
-    res.status(200).json({ success: true, matches });
-  } catch (error) {
-    console.error('Error fetching matches:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
 
 
 module.exports = {
