@@ -620,25 +620,23 @@ const logoutUser = (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { deleted } = req.body;
 
-    const user = await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       id,
-      { deleted },
+      { deleted: true },
       { new: true }
     );
 
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-    res.json({ success: true, user });
+    res.status(200).json({ success: true, user: updatedUser });
   } catch (error) {
-    console.error(error);
+    console.error('Error marking user as deleted:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
-
-
-
 
 module.exports = {
   CreateUser,
