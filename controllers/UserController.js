@@ -624,24 +624,19 @@ const deleteUser = async (req, res) => {
 
     const user = await User.findByIdAndUpdate(
       id,
-      { deleted: !!deleted },
+      { deleted },
       { new: true }
     );
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    res.status(200).json({
-      success: true,
-      message: "User marked as deleted",
-      user,
-    });
+    res.json({ success: true, user });
   } catch (error) {
-    console.error('Error in markUserAsDeleted:', error);
+    console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 
 
