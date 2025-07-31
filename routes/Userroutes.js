@@ -18,6 +18,7 @@ router.get('/users', getAllUsers);
 router.post('/users/avatars', authenticateToken, getAvatar); // 🔐 Protected
 router.get('/user/:id',  authenticateToken,getsingleUser);
 router.get('/activate-user/:userId', authenticateToken, manualactvateuser);
-router.delete('/delete-user/:id',  authenticateToken,deleteUser);
+router.put
+('/delete-user/:id',  authenticateToken,deleteUser);
 
 module.exports = router;
