@@ -622,9 +622,9 @@ const deleteUser = async (req, res) => {
     const { id } = req.params;
     const { deleted } = req.body;
 
-    const user = await Users.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
       id,
-      { deleted: deleted === true },
+      { deleted: !!deleted },
       { new: true }
     );
 

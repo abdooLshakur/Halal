@@ -13,12 +13,11 @@ router.post('/checkactivation', authenticateToken, verifyUser);
 router.post("/reset-password", resetPassword);
 router.post("/contactus", contactUs);
 router.post("/logout", logoutUser);
-router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updateUser);
-router.get('/users', getAllUsers);
 router.post('/users/avatars', authenticateToken, getAvatar); // 🔐 Protected
+router.put('/update-user/:id', authenticateToken, upload.single('avatar'), updateUser);
+router.put('/delete-user/:id',  authenticateToken, deleteUser);
+router.get('/users', getAllUsers);
 router.get('/user/:id',  authenticateToken,getsingleUser);
 router.get('/activate-user/:userId', authenticateToken, manualactvateuser);
-router.put
-('/delete-user/:id',  authenticateToken,deleteUser);
 
 module.exports = router;
