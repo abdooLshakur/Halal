@@ -102,7 +102,9 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.json({ success: false, message: "account does not exist or invalid credentials" });
     }
-
+    if (user.deleted === true) {
+      return res.json({ success: false, message: "account has been deleted contact admin if this is an error" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -184,7 +186,12 @@ const getAllUsers = async (req, res) => {
     weight,
   } = req.query;
 
-  const filters = {};
+  const userId = req.user?._id;
+
+  const filters = {
+    deleted: { $ne: true }, // exclude deleted users
+    _id: { $ne: userId },   // exclude currently logged-in user
+  };
 
   if (location) filters.location = location;
   if (ethnicity) filters.ethnicity = ethnicity;
@@ -210,6 +217,7 @@ const getAllUsers = async (req, res) => {
     });
   }
 };
+
 
 // Get single user by ID
 const getsingleUser = (req, res) => {
@@ -301,10 +309,10 @@ const updateUser = async (req, res) => {
       spouseQualities: req.body.spouseQualities,
       stateOfOrigin: req.body.stateOfOrigin,
       weight: req.body.weight,
-      nickname: req.body.nickname?.trim() , 
+      nickname: req.body.nickname?.trim(),
     };
 
-    
+
     if (avatarpath) {
       updatedFields.avatar = avatarpath;
     }
@@ -363,7 +371,7 @@ const verifyUser = async (req, res) => {
     }
 
     return res.status(200).json({
-      activated: user.isVerified, 
+      activated: user.isVerified,
     });
 
   } catch (err) {
@@ -505,7 +513,7 @@ const requestPasswordReset = async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
-    
+
     res.status(200).json({
       message: "Reset link sent to your email",
       token,
