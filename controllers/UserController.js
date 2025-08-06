@@ -102,7 +102,7 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.json({ success: false, message: "account does not exist or invalid credentials" });
     }
-    if (user.deleted === true) {
+    if (user.is_deleted === true) {
       return res.json({ success: false, message: "account has been deleted contact admin if this is an error" });
     }
 
@@ -189,8 +189,8 @@ const getAllUsers = async (req, res) => {
   const userId = req.user?._id;
 
   const filters = {
-    deleted: { $ne: true }, // exclude deleted users
-    _id: { $ne: userId },   // exclude currently logged-in user
+    is_deleted: { $ne: true },
+    _id: { $ne: userId },  
   };
 
   if (location) filters.location = location;
@@ -217,6 +217,45 @@ const getAllUsers = async (req, res) => {
     });
   }
 };
+
+const AdminAllUsers = async (req, res) => {
+  try {
+    const {
+      location,
+      ethnicity,
+      age,
+      gender,
+      maritalStatus,
+      height,
+      weight,
+    } = req.query;
+
+    const filters = {}; 
+
+    if (location) filters.location = location;
+    if (ethnicity) filters.ethnicity = ethnicity;
+    if (gender) filters.gender = gender;
+    if (maritalStatus) filters.maritalStatus = maritalStatus;
+    if (height && !isNaN(height)) filters.height = { $lte: Number(height) };
+    if (weight && !isNaN(weight)) filters.weight = { $lte: Number(weight) };
+    if (age && !isNaN(age)) filters.age = { $lte: Number(age) }; 
+
+    const users = await Users.find(filters).select("-password -__v");
+
+    res.json({
+      success: true,
+      data: users,
+      total: users.length,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch users",
+      error: err.message,
+    });
+  }
+};
+
 
 
 // Get single user by ID
@@ -628,20 +667,17 @@ const logoutUser = (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      { deleted: true },
-      { new: true }
-    );
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: 'User not found' });
+    const user = await Users.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
+    // Toggle logic here
+    user.is_deleted = !user.is_deleted;
+    await user.save();
 
-    res.status(200).json({ success: true, user: updatedUser });
+    res.status(200).json({ success: true, data:"user recycled" });
   } catch (error) {
-    console.error('Error marking user as deleted:', error);
+    console.error('Error toggling user deletion status:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -662,4 +698,5 @@ module.exports = {
   manualactvateuser,
   deleteUser,
   logoutUser,
+  AdminAllUsers
 };

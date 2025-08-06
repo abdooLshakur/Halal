@@ -23,14 +23,9 @@ const createNotification = async (req, res) => {
       return res.status(400).json({ message: 'Notification type is required' });
     }
 
-    if (!message || typeof message !== 'string' || !message.trim()) {
-      return res.status(400).json({ message: 'Message is required and must be a non-empty string' });
-    }
-
-    // Optional: prevent duplicate notifications of the same type between same users
     const existing = await Notification.findOne({ sender, recipient, type });
     if (existing) {
-      return res.status(409).json({ message: 'Notification already exists' });
+      return res.status(409).json({ message: 'request already sent' });
     }
 
     const notification = await Notification.create({
@@ -111,7 +106,7 @@ const getAllNotifications = async (req, res) => {
     }
 
     const notifications = await Notification.find(query)
-      .sort({ createdAt: -1 }) // Newest first
+      .sort({ createdAt: -1 })
       .populate('sender', 'first_name last_name')
       .populate('recipient', 'first_name last_name'); // Optional: add recipient name too
 

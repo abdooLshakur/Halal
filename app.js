@@ -85,15 +85,14 @@ const io = new Server(server, {
 
 // Socket.IO connection handler
 io.on("connection", (socket) => {
-  console.log(`🔌 Client connected: ${socket.id}`);
+  // console.log(`🔌 Client connected: ${socket.id}`);
 
   socket.on("sendNotification", (data) => {
-    console.log("📨 Received notification:", data);
     io.emit("newNotification", data); // Broadcast to all clients
   });
 
   socket.on("disconnect", () => {
-    console.log(`❌ Client disconnected: ${socket.id}`);
+    // console.log(`❌ Client disconnected: ${socket.id}`);
   });
 });
 
