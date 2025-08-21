@@ -45,23 +45,70 @@ const createNotification = async (req, res) => {
   }
 };
 
-const fixMatchesOverGet = async () => {
+const fixMatchesOverGet = async (req, res) => {
   try {
-    setIsLoading(true);
-    const { data } = await axios.get(`${API}/matches`, {
-      withCredentials: true,
+    const acceptedNotifications = await Notification.find({
+      type: "interest",
+      status: "accepted",
+      matchCreated: { $ne: true }
     });
 
-    const sortedMatches = (data.matches || []).sort((a, b) => {
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
+    let createdCount = 0;
+    let skippedCount = 0;
 
-    setMatches(sortedMatches);
-  } catch (err) {
-    console.error("Error fetching matches:", err);
-    toast.error("Failed to fetch matches.");
-  } finally {
-    setIsLoading(false);
+    for (const notification of acceptedNotifications) {
+      const senderId = notification.sender.toString();
+      const recipientId = notification.recipient.toString();
+
+      // Always order users the same way
+      const [user1, user2] = senderId < recipientId
+        ? [senderId, recipientId]
+        : [recipientId, senderId];
+
+      // Check if match already exists
+      const existingMatch = await Match.findOne({ user1, user2 });
+
+      if (existingMatch) {
+        skippedCount++;
+        notification.matchCreated = true;
+        await notification.save();
+        continue;
+      }
+
+      // Create the match
+      await Match.create({ user1, user2 });
+
+      // Notify both users
+      const message = "You’ve been matched! Contact info will be shared once approved.";
+
+      await Notification.create({
+        recipient: senderId,
+        sender: recipientId,
+        type: "interest_response",
+        message
+      });
+
+      await Notification.create({
+        recipient: recipientId,
+        sender: senderId,
+        type: "interest_response",
+        message
+      });
+
+      // Mark the original notification as processed
+      notification.matchCreated = true;
+      await notification.save();
+
+      createdCount++;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Backup run complete: ${createdCount} new matches created, ${skippedCount} skipped.`
+    });
+  } catch (error) {
+    console.error("Error in fixOverFetch:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
