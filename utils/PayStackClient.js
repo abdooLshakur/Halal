@@ -1,41 +1,38 @@
 const axios = require("axios");
 
-async function getAuthToken() {
-  try {
-   const res = await axios.post(
-  `${process.env.BANK9JA_BASE_URL}/authenticate`,
-  {},
-  {
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Basic ${Buffer.from(
-        `${process.env.BANK9JA_PUBLIC_KEY}:${process.env.BANK9JA_PRIVATE_KEY}`
-      ).toString("base64")}`,
-    },
+const bank9jaClient = axios.create({
+  baseURL: "https://baastest.9psb.com.ng:8445/payment-gateway-api/v1",
+  headers: { "Content-Type": "application/json" },
+  timeout: 15000,
+});
+
+// Debug logs for requests/responses
+bank9jaClient.interceptors.request.use((config) => {
+  console.log("➡️ Bank9ja Request:", {
+    method: config.method,
+    url: config.baseURL + config.url,
+    headers: config.headers,
+    body: config.data,
+  });
+  return config;
+});
+
+bank9jaClient.interceptors.response.use(
+  (response) => {
+    console.log("⬅️ Bank9ja Response:", {
+      status: response.status,
+      data: response.data,
+    });
+    return response;
+  },
+  (error) => {
+    console.error("❌ Bank9ja Response Error:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    return Promise.reject(error);
   }
 );
 
-
-    // ✅ Pull token from Bank9ja's "data" object
-    return res.data.data.accessToken;
-  } catch (err) {
-    console.error("Bank9ja Auth Error:", err.response?.data || err.message);
-    throw new Error("Failed to authenticate with Bank9ja");
-  }
-}
-
-async function bank9jaRequest(method, endpoint, data = {}) {
-  const token = await getAuthToken();
-
-  return axios({
-    method,
-    url: `${process.env.BANK9JA_BASE_URL}${endpoint}`,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    data,
-  });
-}
-
-module.exports = bank9jaRequest;
+module.exports = bank9jaClient;

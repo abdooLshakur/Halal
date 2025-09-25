@@ -256,8 +256,6 @@ const AdminAllUsers = async (req, res) => {
   }
 };
 
-
-
 // Get single user by ID
 const getsingleUser = (req, res) => {
   const id = req.params.id;

@@ -1,72 +1,49 @@
-const bank9jaRequest = require('../utils/PayStackClient');
+const paystack = require('../utils/PayStackClient');
 const { v4: uuidv4 } = require('uuid');
 const Payment = require('../models/PaymentModal');
 
-exports.initiateBank9jaPayment = async (req, res) => {
-  const { email, name, amount } = req.body;
-
-  // ✅ Unique reference between 18-25 chars
-  const merchantReference = uuidv4().replace(/-/g, "").slice(0, 20);
+exports.initiateBankTransfer = async (req, res) => {
+  const { email, amount } = req.body;
+  const amountInKobo = amount * 100;
 
   try {
-    const response = await bank9jaRequest("post", "/initiate-payment", {
-      amount,
-      customer: { email, name },
-      merchantReference,
-      callbackUrl: "http://localhost:3000/payment/callback", // Change for prod
-      description: "Halal Match Profile Activation",
-    });
-
-    const data = response.data.data;
-
-    // Save pending payment
-    await Payment.create({
+    const response = await paystack.post('/transaction/initialize', {
       email,
-      amount,
-      reference: merchantReference,
-      status: "pending",
+      amount: amountInKobo,
+      callback_url: 'http://localhost:8000/payment/callback',
+      channels: ['bank'], 
+      metadata: {
+        custom_fields: [
+          {
+            display_name: 'Payment for order',
+            variable_name: 'order_id',
+            value: uuidv4(),
+          },
+        ],
+      },
     });
 
-    res.json({
-      status: "success",
-      payment_link: data.link,
-      reference: merchantReference,
-    });
-  } catch (err) {
-    console.error("Bank9ja Payment Error:", err.response?.data || err.message);
-    res
-      .status(500)
-      .json({ status: "error", message: "Payment initiation failed" });
-  }
-};
+    if (response.data.status) {
+      // Save payment record as pending
+      await Payment.create({
+        email,
+        amount,
+        reference: response.data.data.reference,
+        status: 'pending',
+      });
 
-exports.verifyBank9jaPayment = async (req, res) => {
-  const { reference } = req.params;
-
-  try {
-    const response = await bank9jaRequest(
-      "get",
-      `/verify-payment?reference=${reference}`
-    );
-
-    const paymentData = response.data.data;
-
-    if (paymentData.status === "SUCCESS") {
-      await Payment.findOneAndUpdate(
-        { reference },
-        { status: "success" }
-      );
-      return res.json({ status: "success", data: paymentData });
+      return res.json({
+        status: 'success',
+        authorization_url: response.data.data.authorization_url,
+        access_code: response.data.data.access_code,
+        reference: response.data.data.reference,
+      });
     } else {
-      await Payment.findOneAndUpdate(
-        { reference },
-        { status: "failed" }
-      );
-      return res.status(400).json({ status: "failed", message: "Payment not successful" });
+      return res.status(400).json({ status: 'failed', message: 'Failed to initialize transaction' });
     }
-  } catch (err) {
-    console.error("Bank9ja Verify Error:", err.response?.data || err.message);
-    res.status(500).json({ status: "error", message: "Error verifying payment" });
+  } catch (error) {
+    console.error(error.response?.data || error.message);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -93,32 +70,29 @@ exports.verifyTransaction = async (req, res) => {
   }
 };
 
-exports.handleBank9jaWebhook = async (req, res) => {
-  const crypto = require("crypto");
+exports.handleWebhook = async (req, res) => {
+  const crypto = require('crypto');
+  const secret = process.env.PAYSTACK_SECRET_KEY;
 
-  const { amount, merchantReference, senderAccountNo, sessionId } = req.body;
-  const rawString =
-    process.env.BANK9JA_WEBHOOK_SECRET +
-    parseFloat(amount).toFixed(2) +
-    merchantReference +
-    senderAccountNo +
-    sessionId;
-
-  const hash = crypto.createHash("sha512").update(rawString).digest("hex");
-
-  if (hash !== req.headers["hash"]) {
-    return res.status(400).json({ code: "99", message: "Invalid signature" });
+  const hash = crypto.createHmac('sha512', secret).update(req.body).digest('hex');
+  const signature = req.headers['x-paystack-signature'];
+  if (hash !== signature) {
+    return res.status(400).send('Invalid signature');
   }
 
-  // ✅ Verify payment before marking as success
-  const verifyRes = await bank9jaRequest(
-    "get",
-    `/verify-payment?reference=${merchantReference}`
-  );
+  const event = JSON.parse(req.body.toString());
+  const { event: eventType, data } = event;
 
-  if (verifyRes.data.data.status === "SUCCESS") {
-    await Payment.findOneAndUpdate({ reference: merchantReference }, { status: "success" });
+  if (eventType === 'charge.success') {
+    const reference = data.reference;
+    const amount = data.amount / 100;
+    const customerEmail = data.customer.email;
+
+    console.log(`✅ Payment successful for ${customerEmail} — ₦${amount} | Ref: ${reference}`);
+
+    // Update payment status to success
+    await Payment.findOneAndUpdate({ reference }, { status: 'success' });
   }
 
-  res.json({ code: "00", message: "Webhook received" });
+  res.sendStatus(200);
 };
