@@ -10,6 +10,7 @@ router.post("/register-User", upload.single('avatar'), CreateUser);
 router.post("/user-login", loginUser);
 router.post("/activate", activateUserAfterPayment);
 router.post("/request-password-reset", requestPasswordReset);
+router.get('/checkactivation', authenticateToken, verifyUser);
 router.post('/checkactivation', authenticateToken, verifyUser);
 router.post("/reset-password", resetPassword);
 router.post("/contactus", contactUs);

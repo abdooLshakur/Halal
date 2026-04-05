@@ -1,9 +1,9 @@
-const Interest = require("../models/IntrestModel");
-const Users = require("../models/UserModel");
+const Notification = require("../models/notification");
+const { createRequest, respondToRequest } = require("../services/requestService");
 
 const expressInterest = async (req, res) => {
-  const sender = req.user.id; 
-  const receiver = req.params.id;   // <- get it from route param
+  const sender = req.user._id;
+  const receiver = req.params.id;
   const { message } = req.body;
 
   if (!receiver) {
@@ -11,36 +11,50 @@ const expressInterest = async (req, res) => {
   }
 
   try {
-    const interest = new Interest({ sender, receiver, message });
-    await interest.save();
+    const interest = await createRequest({
+      requesterId: sender,
+      recipientId: receiver,
+      type: "interest",
+      message,
+    });
 
     res.json({ success: true, message: "Interest sent!", data: interest });
   } catch (err) {
-    res.json({ success: false, message: "Failed to send interest", error: err.message });
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: "Failed to send interest",
+      error: err.message,
+    });
   }
 };
-
 
 const respondToInterest = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  if (!['accepted', 'rejected'].includes(status)) {
-    return res.status(400).json({ success: false, message: 'Invalid status' });
+  if (!["accepted", "rejected"].includes(status)) {
+    return res.status(400).json({ success: false, message: "Invalid status" });
   }
 
   try {
-    const updatedInterest = await Interest.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true }
-    );
-    if (!updatedInterest) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
-    res.status(200).json({ success: true, data: updatedInterest });
+    const { requestNotification, responseNotification, match } =
+      await respondToRequest({
+        notificationId: id,
+        responderId: req.user._id,
+        action: status,
+      });
+
+    res.status(200).json({
+      success: true,
+      data: requestNotification,
+      responseNotification,
+      match,
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
   }
 };
 
@@ -48,34 +62,34 @@ const getInterestRequest = async (req, res) => {
   const userId = req.params.id;
 
   try {
-    // Find all interest requests where the current user is either sender or receiver
-    const interests = await Interest.find({
-      $or: [{ sender: userId }, { receiver: userId }]
+    const interests = await Notification.find({
+      type: { $in: ["interest", "interest_response"] },
+      $or: [{ sender: userId }, { recipient: userId }],
     })
-      .populate('sender', 'first_name last_name')
-      .populate('receiver', 'first_name last_name');
+      .sort({ createdAt: -1 })
+      .populate("sender", "first_name last_name")
+      .populate("recipient", "first_name last_name");
 
-    // Format the results with full names
-    const formattedInterests = interests.map((interest) => {
-      const senderFullName = `${interest.sender.first_name} ${interest.sender.last_name}`;
-      const receiverFullName = `${interest.receiver.first_name} ${interest.receiver.last_name}`;
-
-      return {
-        _id: interest._id,
-        message: interest.message,
-        status: interest.status,
-        createdAt: interest.createdAt,
-        updatedAt: interest.updatedAt,
-        sender: {
-          _id: interest.sender._id,
-          fullName: senderFullName
-        },
-        receiver: {
-          _id: interest.receiver._id,
-          fullName: receiverFullName
-        }
-      };
-    });
+    const formattedInterests = interests.map((interest) => ({
+      _id: interest._id,
+      message: interest.message,
+      type: interest.type,
+      status: interest.status,
+      createdAt: interest.createdAt,
+      updatedAt: interest.requestResolvedAt || interest.createdAt,
+      sender: {
+        _id: interest.sender?._id || null,
+        fullName: interest.sender
+          ? `${interest.sender.first_name} ${interest.sender.last_name}`
+          : "Deleted Account",
+      },
+      receiver: {
+        _id: interest.recipient?._id || null,
+        fullName: interest.recipient
+          ? `${interest.recipient.first_name} ${interest.recipient.last_name}`
+          : "Deleted Account",
+      },
+    }));
 
     res.status(200).json({ success: true, data: formattedInterests });
   } catch (error) {
@@ -84,18 +98,22 @@ const getInterestRequest = async (req, res) => {
   }
 };
 
-
-
 const deleteInterestRequest = async (req, res) => {
   const { id } = req.params;
   try {
-    const deleted = await Interest.findByIdAndDelete(id);
+    const deleted = await Notification.findOneAndDelete({
+      _id: id,
+      type: "interest",
+      $or: [{ sender: req.user._id }, { recipient: req.user._id }],
+    });
+
     if (!deleted) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
+      return res.status(404).json({ success: false, message: "Request not found" });
     }
-    res.status(200).json({ success: true, message: 'Request deleted successfully' });
+
+    res.status(200).json({ success: true, message: "Request deleted successfully" });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -103,5 +121,5 @@ module.exports = {
   expressInterest,
   respondToInterest,
   getInterestRequest,
-  deleteInterestRequest
+  deleteInterestRequest,
 };

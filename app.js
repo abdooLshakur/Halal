@@ -2,14 +2,15 @@ require('dotenv').config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const path = require("path");
 const cookieParser = require("cookie-parser");
 const http = require("http");
 const { Server } = require("socket.io");
+const { allowedOrigins } = require("./utils/config");
 
 // Import routes
 const UserRoutes = require("./routes/Userroutes");
 const Intresetroutes = require("./routes/Interestroutes");
+const ImagerequestRoutes = require("./routes/Imagerequest");
 const notification = require('./routes/Ntificationroutes');
 const MatchRoute = require('./routes/MacthRoute');
 const AdminRoute = require('./routes/Adminroutes');
@@ -28,13 +29,6 @@ if (!dbUrl || !SECRET_KEY) {
   console.error("Missing critical environment variables!");
   process.exit(1);
 }
-
-// Allowlisted domains for CORS
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://halalmatchmakings.com",
-  "https://www.halalmatchmakings.com",
-];
 
 // CORS
 const corsOptions = {
@@ -69,6 +63,7 @@ app.get("/", (req, res) => {
 app.use(AdminRoute);
 app.use(UserRoutes);
 app.use(Intresetroutes);
+app.use(ImagerequestRoutes);
 app.use(notification);
 app.use(MatchRoute);
 app.use(Galleryroutes);

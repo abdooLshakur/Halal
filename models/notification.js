@@ -7,8 +7,15 @@ const NotificationSchema = new mongoose.Schema({
   isRead: { type: Boolean, default: false },
   message: { type: String },
   status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+  matchCreated: { type: Boolean, default: false },
+  parentNotification: { type: mongoose.Schema.Types.ObjectId, ref: 'Notification', default: null },
+  respondedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  requestResolvedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 });
+NotificationSchema.index({ recipient: 1, createdAt: -1 });
+NotificationSchema.index({ sender: 1, type: 1, status: 1 });
+NotificationSchema.index({ parentNotification: 1 });
 const notification = mongoose.model('Notification', NotificationSchema);
 
 module.exports = notification;

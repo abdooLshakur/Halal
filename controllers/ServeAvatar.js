@@ -15,9 +15,13 @@ const serveAvatar = async (req, res) => {
     }
 
     // Check if requester is allowed to access the avatar
-    const isAllowed = owner.avatarAccessGrantedTo.some(
-      (id) => id.toString() === requesterId.toString()
-    );
+    const isAllowed =
+      owner.avatarAccessGrantedTo.some(
+        (id) => id.toString() === requesterId.toString()
+      ) ||
+      owner.approvedViewers.some(
+        (id) => id.toString() === requesterId.toString()
+      );
 
     if (!isAllowed && ownerId !== requesterId.toString()) {
       return res.status(403).json({ message: 'Access to this avatar is denied' });

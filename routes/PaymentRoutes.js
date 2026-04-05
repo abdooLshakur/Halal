@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const {
-  initiateBank9jaPayment,
-  verifyBank9jaPayment,
+  initiateBankTransfer,
+  verifyTransaction,
 } = require('../controllers/PaymentController');
-router.post("/bank9ja/initiate", initiateBank9jaPayment);
-router.get('/paystack/verify/:reference', verifyBank9jaPayment);
+router.post("/bank9ja/initiate", initiateBankTransfer);
+router.get('/paystack/verify/:reference', verifyTransaction);
 
 module.exports = router;

@@ -11,12 +11,15 @@ const {
     getsingleAdmin,
     deleteAdmin,
     verifyAdmin,
+    sendBroadcastEmail,
 } = require("../controllers/AdminController");
-const { manualactvateuser } = require("../controllers/UserController");
+const { manualactvateuser, getContactMessages } = require("../controllers/UserController");
 
 
 router.post("/register-Admin", upload.single('avatar'), CreateAdmin);
 router.post("/Admin-login", loginAdmin);
+router.post("/admin/broadcast-email", Protected, sendBroadcastEmail);
+router.get("/messages", Protected, getContactMessages);
 router.put('/users/:userId/manualverify', Protected, manualactvateuser);
 router.put('/admins/:userId/verify', Protected, verifyAdmin);
 router.put('/update-Admin/:id',     Protected, upload.single('avatar'), updateAdmin);

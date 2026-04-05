@@ -1,7 +1,11 @@
 const bcrypt = require("bcryptjs");
 const Admins = require("../models/AdminModel");
+const Users = require("../models/UserModel");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
+const { uploadBuffer } = require("../utils/Cloudinary");
+const { buildCookieOptions, frontendBaseUrl } = require("../utils/config");
+const { createMailer, resolveMailerUser } = require("../utils/mailer");
+const { ensureResendConfigured, sendBatchEmails } = require("../utils/resend");
 
 const CreateAdmin = async (req, res) => {
   try {
@@ -42,7 +46,13 @@ const CreateAdmin = async (req, res) => {
       });
     }
 
-    const avatar = req.file ? req.file.path : '';
+    const avatarUpload = req.file
+      ? await uploadBuffer(req.file, {
+          folder: "halal_uploads/admins",
+          transformation: [{ width: 500, height: 500, crop: "limit" }],
+        })
+      : null;
+    const avatar = avatarUpload?.secure_url || '';
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -111,23 +121,15 @@ const loginAdmin = async (req, res) => {
       avatar: Admin.avatar,
     };
 
-    const isProduction = process.env.NODE_ENV === "production";
-
-    const cookieOptionsToken = {
+    const cookieOptionsToken = buildCookieOptions({
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
       maxAge: 2 * 24 * 60 * 60 * 1000,
-      ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
-    };
+    });
 
-    const cookieOptionsUser = {
+    const cookieOptionsUser = buildCookieOptions({
       httpOnly: false,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
       maxAge: 2 * 24 * 60 * 60 * 1000,
-      ...(isProduction && { domain: ".halalmatchmakings.com" }),
-    };
+    });
 
 
     res.cookie("token", token, cookieOptionsToken);
@@ -149,13 +151,14 @@ const loginAdmin = async (req, res) => {
 };
 
 const acknowledgeConsent = (req, res) => {
-  res.cookie("cookie_consent", "accepted", {
-    sameSite: "none",
-    secure: true,
-    httpOnly: true,
-    maxAge: 365 * 24 * 60 * 60 * 1000,
-    domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com",
-  });
+  res.cookie(
+    "cookie_consent",
+    "accepted",
+    buildCookieOptions({
+      httpOnly: true,
+      maxAge: 365 * 24 * 60 * 60 * 1000,
+    })
+  );
   res.status(200).json({ success: true, message: "Consent acknowledged" });
 };
 
@@ -196,7 +199,13 @@ const getsingleAdmin = (req, res) => {
 const updateAdmin = async (req, res) => {
   try {
     const id = req.params.id;
-    const avatarpath = req.file ? req.file.path : undefined;
+    const avatarUpload = req.file
+      ? await uploadBuffer(req.file, {
+          folder: "halal_uploads/admins",
+          transformation: [{ width: 500, height: 500, crop: "limit" }],
+        })
+      : null;
+    const avatarpath = avatarUpload?.secure_url;
 
     const updatedFields = {
       age: req.body.age,
@@ -222,13 +231,15 @@ const updateAdmin = async (req, res) => {
       avatar: updatedAdmin.avatar,
     };
 
-    res.cookie("Admin", JSON.stringify(AdminCookieData), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com",
-    });
+    res.cookie(
+      "Admin",
+      JSON.stringify(AdminCookieData),
+      buildCookieOptions({
+        httpOnly: false,
+        sameSite: "Lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      })
+    );
 
     res.json({ success: true, message: "Admin profile updated successfully" });
   } catch (err) {
@@ -251,18 +262,12 @@ const requestPasswordReset = async (req, res) => {
     Admin.resetPasswordExpires = Date.now() + 3600000;
     await Admin.save();
 
-    const resetLink = `https://www.halalmatchmakings.com/reset-password?token=${token}&email=${email}`;
-
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_Admin,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    const resetLink = `${frontendBaseUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+    const transporter = createMailer({ userEnvKey: "EMAIL_Admin" });
+    const mailerUser = resolveMailerUser("EMAIL_Admin");
 
     const mailOptions = {
-      from: `"Halal Matchmaking" <${process.env.EMAIL_Admin}>`,
+      from: `"Halal Matchmaking" <${mailerUser}>`,
       to: email,
       subject: "Password Reset",
       html: `
@@ -331,9 +336,139 @@ const verifyAdmin = async (req, res) => {
   }
 };
 
+const escapeHtml = (value = "") =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const buildBroadcastHtml = ({ heading, message }) => {
+  const safeHeading = escapeHtml(heading);
+  const safeMessage = escapeHtml(message).replace(/\r?\n/g, "<br />");
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #4a2136;">
+      <div style="border-radius: 24px; padding: 32px; background: linear-gradient(180deg, #fff7fa 0%, #fff0f5 100%); border: 1px solid #f4c8d9;">
+        <p style="margin: 0 0 12px; color: #b62f69; font-size: 12px; letter-spacing: 0.28em; text-transform: uppercase;">
+          Halal Matchmaking
+        </p>
+        <h1 style="margin: 0 0 18px; color: #6c2148; font-size: 28px; line-height: 1.2;">
+          ${safeHeading}
+        </h1>
+        <div style="font-size: 16px; line-height: 1.75; color: #5d3043;">
+          ${safeMessage}
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+const sendBroadcastEmail = async (req, res) => {
+  try {
+    ensureResendConfigured();
+
+    const {
+      subject,
+      message,
+      audience = "verified",
+      replyTo,
+      dryRun = false,
+    } = req.body || {};
+
+    if (!subject?.trim() || !message?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Subject and message are required",
+      });
+    }
+
+    if (!["verified", "all"].includes(audience)) {
+      return res.status(400).json({
+        success: false,
+        message: "Audience must be either 'verified' or 'all'",
+      });
+    }
+
+    const query = {
+      is_deleted: { $ne: true },
+    };
+
+    if (audience === "verified") {
+      query.isVerified = true;
+    }
+
+    const users = await Users.find(query).select("email first_name").lean();
+    const recipients = [...new Set(
+      users
+        .map((user) => user.email?.trim().toLowerCase())
+        .filter(Boolean)
+    )];
+
+    if (recipients.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No recipients found for the selected audience",
+      });
+    }
+
+    const html = buildBroadcastHtml({
+      heading: subject.trim(),
+      message: message.trim(),
+    });
+
+    const text = message.trim();
+
+    if (dryRun) {
+      return res.status(200).json({
+        success: true,
+        dryRun: true,
+        audience,
+        recipientCount: recipients.length,
+        sampleRecipients: recipients.slice(0, 10),
+      });
+    }
+
+    const delivery = await sendBatchEmails({
+      recipients,
+      subject: subject.trim(),
+      html,
+      text,
+      replyTo: replyTo?.trim() || undefined,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Broadcast email queued with Resend",
+      audience,
+      recipientCount: recipients.length,
+      batchCount: delivery.batchCount,
+      batchSize: delivery.batchSize,
+    });
+  } catch (error) {
+    console.error("Broadcast email error:", error.response?.data || error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to send broadcast email",
+      providerError: error.response?.data || null,
+    });
+  }
+};
+
 const logoutAdmin = (req, res) => {
-  res.clearCookie("token", { domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com" });
-  res.clearCookie("Admin", { domain: process.env.COOKIE_DOMAIN || ".halalmatchmakings.com" });
+  res.clearCookie(
+    "token",
+    buildCookieOptions({
+      httpOnly: true,
+    })
+  );
+  res.clearCookie(
+    "Admin",
+    buildCookieOptions({
+      httpOnly: false,
+    })
+  );
   res.json({ success: true, message: "Logged out successfully" });
 };
 
@@ -357,6 +492,7 @@ module.exports = {
   requestPasswordReset,
   updateAdmin,
   verifyAdmin,
+  sendBroadcastEmail,
   acknowledgeConsent,
   deleteAdmin,
   logoutAdmin,

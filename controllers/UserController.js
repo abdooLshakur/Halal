@@ -1,8 +1,11 @@
 const bcrypt = require("bcryptjs");
 const Users = require("../models/UserModel");
+const ContactMessage = require("../models/ContactMessage");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
 const axios = require("axios");
+const { uploadBuffer } = require("../utils/Cloudinary");
+const { buildCookieOptions, frontendBaseUrl } = require("../utils/config");
+const { createMailer, resolveMailerUser } = require("../utils/mailer");
 
 const CreateUser = async (req, res) => {
   try {
@@ -49,7 +52,13 @@ const CreateUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const avatar = req.file ? req.file.path : null;
+    const avatarUpload = req.file
+      ? await uploadBuffer(req.file, {
+          folder: "halal_uploads/users",
+          transformation: [{ width: 500, height: 500, crop: "limit" }],
+        })
+      : null;
+    const avatar = avatarUpload?.secure_url || null;
 
     const newUser = new Users({
       first_name,
@@ -125,23 +134,15 @@ const loginUser = async (req, res) => {
       avatar: user.avatar,
     };
 
-    const isProduction = process.env.NODE_ENV === "production";
-
-    const cookieOptionsToken = {
+    const cookieOptionsToken = buildCookieOptions({
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
       maxAge: 2 * 24 * 60 * 60 * 1000,
-      ...(isProduction && { domain: ".halalmatchmakings.com" }), // only add domain in production
-    };
+    });
 
-    const cookieOptionsUser = {
+    const cookieOptionsUser = buildCookieOptions({
       httpOnly: false,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
       maxAge: 2 * 24 * 60 * 60 * 1000,
-      ...(isProduction && { domain: ".halalmatchmakings.com" }),
-    };
+    });
 
     // Set cookies
     res.cookie("token", token, cookieOptionsToken);
@@ -164,12 +165,14 @@ const loginUser = async (req, res) => {
 };
 
 const acknowledgeConsent = (req, res) => {
-  res.cookie("cookie_consent", "accepted", {
-    sameSite: "none",
-    secure: true,
-    httpOnly: true,
-    maxAge: 365 * 24 * 60 * 60 * 1000,
-  });
+  res.cookie(
+    "cookie_consent",
+    "accepted",
+    buildCookieOptions({
+      httpOnly: true,
+      maxAge: 365 * 24 * 60 * 60 * 1000,
+    })
+  );
 
   res.status(200).json({ success: true, message: "Consent acknowledged" });
 };
@@ -310,7 +313,13 @@ const getAvatar = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const id = req.params.id;
-    const avatarpath = req.file ? req.file.path : undefined;
+    const avatarUpload = req.file
+      ? await uploadBuffer(req.file, {
+          folder: "halal_uploads/users",
+          transformation: [{ width: 500, height: 500, crop: "limit" }],
+        })
+      : null;
+    const avatarpath = avatarUpload?.secure_url;
     const nickname = req.body.nickname?.trim();
 
     if (nickname) {
@@ -371,12 +380,16 @@ const updateUser = async (req, res) => {
       avatar: updatedUser.avatar,
     };
 
-    res.cookie("user", JSON.stringify(userCookieData), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie(
+      "user",
+      JSON.stringify(userCookieData),
+      buildCookieOptions({
+        httpOnly: false,
+        sameSite: "Lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        includeDomain: false,
+      })
+    );
 
     return res.json({
       success: true,
@@ -396,7 +409,7 @@ const updateUser = async (req, res) => {
 
 const verifyUser = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = req.body?.email || req.user?.email;
 
     if (!email) {
       return res.status(400).json({ error: "Email is required in request body" });
@@ -487,12 +500,16 @@ const activateUserAfterPayment = async (req, res) => {
       activated: true,
     };
 
-    res.cookie("user", JSON.stringify(userCookieData), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie(
+      "user",
+      JSON.stringify(userCookieData),
+      buildCookieOptions({
+        httpOnly: false,
+        sameSite: "Lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        includeDomain: false,
+      })
+    );
 
     return res.status(200).json({
       success: true,
@@ -527,18 +544,12 @@ const requestPasswordReset = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    const resetLink = `https://www.halalmatchmakings.com/reset-password?token=${token}&email=${email}`;
-    // Email setup
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    const resetLink = `${frontendBaseUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+    const transporter = createMailer();
+    const mailerUser = resolveMailerUser();
 
     const mailOptions = {
-      from: `"Halal Matchmaking" <${process.env.EMAIL_USER}>`,
+      from: `"Halal Matchmaking" <${mailerUser}>`,
       to: email,
       subject: "Password Reset",
       html: `
@@ -557,7 +568,6 @@ const requestPasswordReset = async (req, res) => {
       email,
     });
   } catch (error) {
-    console.error("Error in requestPasswordReset:", error.message, error.stack);
     console.error("Error in requestPasswordReset:", error);
     res.status(500).json({ message: "Server error" });
   }
@@ -601,31 +611,33 @@ const resetPassword = async (req, res) => {
 
 const contactUs = async (req, res) => {
   try {
-    const { name, email, message } = req.body;
+    const { name, email, subject = "", message } = req.body;
 
     // Validate input
     if (!name || !email || !message) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    // Setup mail transporter
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER, // Your app email
-        pass: process.env.EMAIL_PASS, // App password
-      },
+    const savedMessage = await ContactMessage.create({
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      subject: subject.trim(),
+      message: message.trim(),
     });
+
+    const transporter = createMailer();
+    const mailerUser = resolveMailerUser();
 
     // Mail content
     const mailOptions = {
       from: `"${name}" <${email}>`,         // User-sent
-      to: process.env.EMAIL_USER,           // Your receiving inbox
-      subject: "New Message",
+      to: mailerUser,                       // Your receiving inbox
+      subject: subject.trim() || "New Message",
       html: `
         <h2>Contact Form Message</h2>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Subject:</strong> ${subject || "N/A"}</p>
         <p><strong>Message:</strong></p>
         <p>${message}</p>
       `,
@@ -634,30 +646,45 @@ const contactUs = async (req, res) => {
     // Send the mail
     await transporter.sendMail(mailOptions);
 
-    return res.status(200).json({ message: "Message sent successfully." });
+    return res.status(200).json({
+      success: true,
+      message: "Message sent successfully.",
+      data: savedMessage,
+    });
   } catch (error) {
     console.error("Error in contactUs:", error);
     return res.status(500).json({ message: "Internal server error." });
   }
 };
 
+const getContactMessages = async (req, res) => {
+  try {
+    const messages = await ContactMessage.find()
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json(messages);
+  } catch (error) {
+    console.error("Error fetching contact messages:", error);
+    return res.status(500).json({ message: "Failed to fetch messages." });
+  }
+};
+
 
 const logoutUser = (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "None",
-    domain: ".halalmatchmakings.com",
-    path: "/",
-  });
+  res.clearCookie(
+    "token",
+    buildCookieOptions({
+      httpOnly: true,
+    })
+  );
 
-  res.clearCookie("user", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "None",
-    domain: ".halalmatchmakings.com",
-    path: "/",
-  });
+  res.clearCookie(
+    "user",
+    buildCookieOptions({
+      httpOnly: false,
+    })
+  );
 
   return res.status(200).json({ message: "Logged out successfully" });
 };
@@ -696,5 +723,6 @@ module.exports = {
   manualactvateuser,
   deleteUser,
   logoutUser,
-  AdminAllUsers
+  AdminAllUsers,
+  getContactMessages,
 };

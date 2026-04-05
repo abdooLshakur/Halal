@@ -1,6 +1,6 @@
 const express = require('express');
 const authenticateToken = require("../middleware/Auth")
-const { createNotification, fixMatchesOverGet, getAllNotifications, deleteNotification, updateNotificationStatus, getApprovedImageRequests, getUnreadCount, markAllAsRead } = require('../controllers/Notification.js');
+const { createNotification, fixMatchesOverGet, getAllNotifications, deleteNotification, updateNotificationStatus, getApprovedImageRequests, getUnreadCount, markAllAsRead, markNotificationAsRead } = require('../controllers/Notification.js');
 const Protected = require('../middleware/Aminauth');
 
 const router = express.Router();
@@ -19,6 +19,7 @@ router.get('/admin/fix-matches/:adminId', Protected, fixMatchesOverGet);
 router.get("/unread-count", authenticateToken, getUnreadCount);
 // Mark all as read
 router.put("/mark-read", authenticateToken, markAllAsRead);
+router.put("/notifications/markAsRead/:notificationId", authenticateToken, markNotificationAsRead);
 // update notification 
 router.put('/updateNotificationStatus/:notificationId', authenticateToken, updateNotificationStatus);
 

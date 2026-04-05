@@ -1,4 +1,5 @@
 const Gallerys = require("../models/Gallery");
+const { uploadBuffer } = require("../utils/Cloudinary");
 
 const CreateGallery = async (req, res) => {
   try {
@@ -12,7 +13,16 @@ const CreateGallery = async (req, res) => {
       });
     }
 
-    const gallery_imgs = files.map(file => file.path);
+    const uploadedImages = await Promise.all(
+      files.map((file) =>
+        uploadBuffer(file, {
+          folder: "halal_uploads/gallery",
+          transformation: [{ width: 1600, height: 1600, crop: "limit" }],
+        })
+      )
+    );
+
+    const gallery_imgs = uploadedImages.map((file) => file.secure_url);
 
     const New_Gallery = {
       gallery_imgs,
@@ -69,7 +79,15 @@ const updateGallery = async (req, res) => {
     };
 
     if (newFiles && newFiles.length > 0) {
-      updateData.gallery_imgs = newFiles.map(file => file.path);
+      const uploadedImages = await Promise.all(
+        newFiles.map((file) =>
+          uploadBuffer(file, {
+            folder: "halal_uploads/gallery",
+            transformation: [{ width: 1600, height: 1600, crop: "limit" }],
+          })
+        )
+      );
+      updateData.gallery_imgs = uploadedImages.map((file) => file.secure_url);
     }
 
     const updatedGallery = await Gallerys.findByIdAndUpdate(id, updateData, { new: true });
