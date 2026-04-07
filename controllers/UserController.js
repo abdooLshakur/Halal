@@ -4,8 +4,13 @@ const ContactMessage = require("../models/ContactMessage");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const { uploadBuffer } = require("../utils/Cloudinary");
-const { buildCookieOptions, frontendBaseUrl } = require("../utils/config");
-const { createMailer, resolveMailerUser } = require("../utils/mailer");
+const {
+  buildCookieOptions,
+  frontendBaseUrl,
+  resetPasswordTokenTtl,
+  resetPasswordTokenTtlMs,
+} = require("../utils/config");
+const { resolveMailerUser, sendEmail } = require("../utils/mailer");
 
 const CreateUser = async (req, res) => {
   try {
@@ -527,9 +532,13 @@ const activateUserAfterPayment = async (req, res) => {
 // Request Reset Controller
 const requestPasswordReset = async (req, res) => {
   try {
-    const { email } = req.body;
+    const normalizedEmail = req.body?.email?.trim().toLowerCase();
 
-    const user = await Users.findOne({ email });
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await Users.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -537,20 +546,17 @@ const requestPasswordReset = async (req, res) => {
     const token = jwt.sign(
       { id: user._id },
       process.env.SECRET_KEY,
-      { expiresIn: "1h" }
+      { expiresIn: resetPasswordTokenTtl }
     );
 
     user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    user.resetPasswordExpires = Date.now() + resetPasswordTokenTtlMs;
     await user.save();
 
-    const resetLink = `${frontendBaseUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
-    const transporter = createMailer();
-    const mailerUser = resolveMailerUser();
+    const resetLink = `${frontendBaseUrl}/reset-password?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
-    const mailOptions = {
-      from: `"Halal Matchmaking" <${mailerUser}>`,
-      to: email,
+    await sendEmail({
+      to: normalizedEmail,
       subject: "Password Reset",
       html: `
         <p>Hi ${user.first_name},</p>
@@ -558,30 +564,33 @@ const requestPasswordReset = async (req, res) => {
         <a href="${resetLink}">Reset Password</a>
         <p>This link will expire in 1 hour.</p>
       `,
-    };
-
-    await transporter.sendMail(mailOptions);
+      text: `Hi ${user.first_name}, reset your password using this link: ${resetLink}`,
+    });
 
     res.status(200).json({
       message: "Reset link sent to your email",
       token,
-      email,
+      email: normalizedEmail,
     });
   } catch (error) {
     console.error("Error in requestPasswordReset:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      message: "Failed to send reset email",
+      error: error.response?.data?.message || error.message,
+    });
   }
 };
 
 const resetPassword = async (req, res) => {
   try {
-    const { token, email, newPassword } = req.body;
+    const { token, newPassword } = req.body;
+    const normalizedEmail = req.body?.email?.trim().toLowerCase();
 
     // CorrecFerence to the environment variable
     const decoded = jwt.verify(token, process.env.SECRET_KEY); // Will throw if invalid/expired
 
     // Find the user by decoded ID and email
-    const user = await Users.findOne({ _id: decoded.id, email });
+    const user = await Users.findOne({ _id: decoded.id, email: normalizedEmail });
     if (!user) return res.status(404).json({ message: "User not found" });
     if (user.resetPasswordExpires < Date.now()) {
       return res.status(400).json({ message: "Reset token expired" });
@@ -625,13 +634,10 @@ const contactUs = async (req, res) => {
       message: message.trim(),
     });
 
-    const transporter = createMailer();
     const mailerUser = resolveMailerUser();
 
-    // Mail content
-    const mailOptions = {
-      from: `"${name}" <${email}>`,         // User-sent
-      to: mailerUser,                       // Your receiving inbox
+    await sendEmail({
+      to: mailerUser,
       subject: subject.trim() || "New Message",
       html: `
         <h2>Contact Form Message</h2>
@@ -641,10 +647,10 @@ const contactUs = async (req, res) => {
         <p><strong>Message:</strong></p>
         <p>${message}</p>
       `,
-    };
-
-    // Send the mail
-    await transporter.sendMail(mailOptions);
+      text: `Name: ${name}\nEmail: ${email}\nSubject: ${subject || "N/A"}\n\n${message}`,
+      from: `"${name}" <${email}>`,
+      replyTo: email,
+    });
 
     return res.status(200).json({
       success: true,

@@ -3,8 +3,13 @@ const Admins = require("../models/AdminModel");
 const Users = require("../models/UserModel");
 const jwt = require("jsonwebtoken");
 const { uploadBuffer } = require("../utils/Cloudinary");
-const { buildCookieOptions, frontendBaseUrl } = require("../utils/config");
-const { createMailer, resolveMailerUser } = require("../utils/mailer");
+const {
+  buildCookieOptions,
+  frontendBaseUrl,
+  resetPasswordTokenTtl,
+  resetPasswordTokenTtlMs,
+} = require("../utils/config");
+const { sendEmail } = require("../utils/mailer");
 const { ensureResendConfigured, sendBatchEmails } = require("../utils/resend");
 
 const CreateAdmin = async (req, res) => {
@@ -250,25 +255,31 @@ const updateAdmin = async (req, res) => {
 
 const requestPasswordReset = async (req, res) => {
   try {
-    const { email } = req.body;
-    const Admin = await Admins.findOne({ email });
+    const normalizedEmail = req.body?.email?.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const Admin = await Admins.findOne({ email: normalizedEmail });
     if (!Admin) {
       return res.status(404).json({ message: "Admin not found" });
     }
 
-    const token = jwt.sign({ id: Admin._id }, process.env.SECRET_KEY, { expiresIn: "1h" });
+    const token = jwt.sign(
+      { id: Admin._id },
+      process.env.SECRET_KEY,
+      { expiresIn: resetPasswordTokenTtl }
+    );
 
     Admin.resetPasswordToken = token;
-    Admin.resetPasswordExpires = Date.now() + 3600000;
+    Admin.resetPasswordExpires = Date.now() + resetPasswordTokenTtlMs;
     await Admin.save();
 
-    const resetLink = `${frontendBaseUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
-    const transporter = createMailer({ userEnvKey: "EMAIL_Admin" });
-    const mailerUser = resolveMailerUser("EMAIL_Admin");
+    const resetLink = `${frontendBaseUrl}/reset-password?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
-    const mailOptions = {
-      from: `"Halal Matchmaking" <${mailerUser}>`,
-      to: email,
+    await sendEmail({
+      to: normalizedEmail,
       subject: "Password Reset",
       html: `
         <p>Hi ${Admin.first_name},</p>
@@ -276,22 +287,30 @@ const requestPasswordReset = async (req, res) => {
         <a href="${resetLink}">Reset Password</a>
         <p>This link will expire in 1 hour.</p>
       `,
-    };
+      text: `Hi ${Admin.first_name}, reset your password using this link: ${resetLink}`,
+      userEnvKey: "EMAIL_Admin",
+    });
 
-    await transporter.sendMail(mailOptions);
-
-    res.status(200).json({ message: "Reset link sent to your email", token, email });
+    res.status(200).json({
+      message: "Reset link sent to your email",
+      token,
+      email: normalizedEmail,
+    });
   } catch (error) {
     console.error("Error in requestPasswordReset:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({
+      message: "Failed to send reset email",
+      error: error.response?.data?.message || error.message,
+    });
   }
 };
 
 const resetPassword = async (req, res) => {
   try {
-    const { token, email, newPassword } = req.body;
+    const { token, newPassword } = req.body;
+    const normalizedEmail = req.body?.email?.trim().toLowerCase();
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const Admin = await Admins.findOne({ _id: decoded.id, email });
+    const Admin = await Admins.findOne({ _id: decoded.id, email: normalizedEmail });
     if (!Admin) return res.status(404).json({ message: "Admin not found" });
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -375,6 +394,7 @@ const sendBroadcastEmail = async (req, res) => {
       audience = "verified",
       replyTo,
       dryRun = false,
+      testEmail,
     } = req.body || {};
 
     if (!subject?.trim() || !message?.trim()) {
@@ -391,20 +411,28 @@ const sendBroadcastEmail = async (req, res) => {
       });
     }
 
-    const query = {
-      is_deleted: { $ne: true },
-    };
+    const normalizedTestEmail = testEmail?.trim().toLowerCase();
 
-    if (audience === "verified") {
-      query.isVerified = true;
+    let recipients = [];
+
+    if (normalizedTestEmail) {
+      recipients = [normalizedTestEmail];
+    } else {
+      const query = {
+        is_deleted: { $ne: true },
+      };
+
+      if (audience === "verified") {
+        query.isVerified = true;
+      }
+
+      const users = await Users.find(query).select("email first_name").lean();
+      recipients = [...new Set(
+        users
+          .map((user) => user.email?.trim().toLowerCase())
+          .filter(Boolean)
+      )];
     }
-
-    const users = await Users.find(query).select("email first_name").lean();
-    const recipients = [...new Set(
-      users
-        .map((user) => user.email?.trim().toLowerCase())
-        .filter(Boolean)
-    )];
 
     if (recipients.length === 0) {
       return res.status(404).json({
@@ -424,6 +452,8 @@ const sendBroadcastEmail = async (req, res) => {
       return res.status(200).json({
         success: true,
         dryRun: true,
+        isTest: Boolean(normalizedTestEmail),
+        testEmail: normalizedTestEmail || null,
         audience,
         recipientCount: recipients.length,
         sampleRecipients: recipients.slice(0, 10),
@@ -440,7 +470,11 @@ const sendBroadcastEmail = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Broadcast email queued with Resend",
+      message: normalizedTestEmail
+        ? "Test email sent with Resend"
+        : "Broadcast email queued with Resend",
+      isTest: Boolean(normalizedTestEmail),
+      testEmail: normalizedTestEmail || null,
       audience,
       recipientCount: recipients.length,
       batchCount: delivery.batchCount,
