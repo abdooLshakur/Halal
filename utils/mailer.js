@@ -23,23 +23,27 @@ const sendEmail = async ({
   userEnvKey = "EMAIL_USER",
 }) => {
   if (process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL) {
-    const resendPayload = {
-      from: from || process.env.RESEND_FROM_EMAIL,
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      html,
-      text,
-      ...(replyTo ? { reply_to: replyTo } : {}),
-    };
+    try {
+      const resendPayload = {
+        from: process.env.RESEND_FROM_EMAIL,
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        html,
+        text,
+        ...(replyTo ? { reply_to: replyTo } : {}),
+      };
 
-    await axios.post("https://api.resend.com/emails", resendPayload, {
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    });
+      await axios.post("https://api.resend.com/emails", resendPayload, {
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-    return { provider: "resend" };
+      return { provider: "resend" };
+    } catch (error) {
+      console.error("Resend send failed, falling back to SMTP:", error.response?.data || error.message);
+    }
   }
 
   const transporter = createMailer({ userEnvKey });

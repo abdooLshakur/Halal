@@ -562,7 +562,7 @@ const requestPasswordReset = async (req, res) => {
         <p>Hi ${user.first_name},</p>
         <p>You requested to reset your password. Click the link below to reset it:</p>
         <a href="${resetLink}">Reset Password</a>
-        <p>This link will expire in 1 hour.</p>
+        <p>This link will expire in ${resetPasswordTokenTtl}.</p>
       `,
       text: `Hi ${user.first_name}, reset your password using this link: ${resetLink}`,
     });

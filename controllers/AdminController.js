@@ -1,6 +1,9 @@
 const bcrypt = require("bcryptjs");
 const Admins = require("../models/AdminModel");
 const Users = require("../models/UserModel");
+const Match = require("../models/MatchModel");
+const Notification = require("../models/notification");
+const ContactMessage = require("../models/ContactMessage");
 const jwt = require("jsonwebtoken");
 const { uploadBuffer } = require("../utils/Cloudinary");
 const {
@@ -116,7 +119,7 @@ const loginAdmin = async (req, res) => {
     const token = jwt.sign(
       { id: Admin._id, isAuthenticated: Admin.isAuthenticated },
       process.env.SECRET_KEY,
-      { expiresIn: '4h' }
+      { expiresIn: '2d' }
     );
 
     const safeAdmin = {
@@ -276,7 +279,7 @@ const requestPasswordReset = async (req, res) => {
     Admin.resetPasswordExpires = Date.now() + resetPasswordTokenTtlMs;
     await Admin.save();
 
-    const resetLink = `${frontendBaseUrl}/reset-password?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
+    const resetLink = `${frontendBaseUrl}/admin-reset-password?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
     await sendEmail({
       to: normalizedEmail,
@@ -285,7 +288,7 @@ const requestPasswordReset = async (req, res) => {
         <p>Hi ${Admin.first_name},</p>
         <p>You requested to reset your password. Click the link below to reset it:</p>
         <a href="${resetLink}">Reset Password</a>
-        <p>This link will expire in 1 hour.</p>
+        <p>This link will expire in ${resetPasswordTokenTtl}.</p>
       `,
       text: `Hi ${Admin.first_name}, reset your password using this link: ${resetLink}`,
       userEnvKey: "EMAIL_Admin",
@@ -352,6 +355,88 @@ const verifyAdmin = async (req, res) => {
   } catch (err) {
     console.error("Server error verifying user:", err);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const getDashboardSummary = async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      verifiedUsers,
+      totalMatches,
+      totalMessages,
+      unreadMessages,
+      pendingRequests,
+      recentUsers,
+      recentMessages,
+      recentNotifications,
+    ] = await Promise.all([
+      Users.countDocuments({ is_deleted: { $ne: true } }),
+      Users.countDocuments({ is_deleted: { $ne: true }, isVerified: true }),
+      Match.countDocuments({}),
+      ContactMessage.countDocuments({}),
+      ContactMessage.countDocuments({}),
+      Notification.countDocuments({ status: "pending" }),
+      Users.find({ is_deleted: { $ne: true } })
+        .sort({ createdAt: -1 })
+        .limit(4)
+        .select("first_name last_name email createdAt")
+        .lean(),
+      ContactMessage.find({})
+        .sort({ createdAt: -1 })
+        .limit(4)
+        .select("name email subject createdAt")
+        .lean(),
+      Notification.find({})
+        .sort({ createdAt: -1 })
+        .limit(4)
+        .select("type status message createdAt")
+        .lean(),
+    ]);
+
+    const recentActivity = [
+      ...recentUsers.map((user) => ({
+        type: "user_signup",
+        title: `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email,
+        description: user.email,
+        createdAt: user.createdAt,
+      })),
+      ...recentMessages.map((message) => ({
+        type: "contact_message",
+        title: message.name || message.email,
+        description: message.subject || "New contact message",
+        createdAt: message.createdAt,
+      })),
+      ...recentNotifications.map((notification) => ({
+        type: "notification",
+        title: `${notification.type} request`,
+        description: notification.message || notification.status,
+        createdAt: notification.createdAt,
+      })),
+    ]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 8);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        metrics: {
+          totalUsers,
+          verifiedUsers,
+          totalMatches,
+          totalMessages,
+          unreadMessages,
+          pendingRequests,
+        },
+        recentActivity,
+      },
+    });
+  } catch (error) {
+    console.error("Dashboard summary error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load dashboard summary",
+    });
   }
 };
 
@@ -460,6 +545,27 @@ const sendBroadcastEmail = async (req, res) => {
       });
     }
 
+    if (normalizedTestEmail) {
+      await sendEmail({
+        to: normalizedTestEmail,
+        subject: subject.trim(),
+        html,
+        text,
+        replyTo: replyTo?.trim() || undefined,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Test email sent",
+        isTest: true,
+        testEmail: normalizedTestEmail,
+        audience,
+        recipientCount: 1,
+        batchCount: 1,
+        batchSize: 1,
+      });
+    }
+
     const delivery = await sendBatchEmails({
       recipients,
       subject: subject.trim(),
@@ -470,11 +576,9 @@ const sendBroadcastEmail = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: normalizedTestEmail
-        ? "Test email sent with Resend"
-        : "Broadcast email queued with Resend",
-      isTest: Boolean(normalizedTestEmail),
-      testEmail: normalizedTestEmail || null,
+      message: "Broadcast email queued with Resend",
+      isTest: false,
+      testEmail: null,
       audience,
       recipientCount: recipients.length,
       batchCount: delivery.batchCount,
@@ -526,6 +630,7 @@ module.exports = {
   requestPasswordReset,
   updateAdmin,
   verifyAdmin,
+  getDashboardSummary,
   sendBroadcastEmail,
   acknowledgeConsent,
   deleteAdmin,

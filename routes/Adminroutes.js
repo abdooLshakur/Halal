@@ -11,6 +11,9 @@ const {
     getsingleAdmin,
     deleteAdmin,
     verifyAdmin,
+    requestPasswordReset,
+    resetPassword,
+    getDashboardSummary,
     sendBroadcastEmail,
 } = require("../controllers/AdminController");
 const { manualactvateuser, getContactMessages } = require("../controllers/UserController");
@@ -18,7 +21,11 @@ const { manualactvateuser, getContactMessages } = require("../controllers/UserCo
 
 router.post("/register-Admin", upload.single('avatar'), CreateAdmin);
 router.post("/Admin-login", loginAdmin);
+router.post("/admin/request-password-reset", requestPasswordReset);
+router.post("/admin/reset-password", resetPassword);
+router.get("/admin/dashboard-summary", Protected, getDashboardSummary);
 router.post("/admin/broadcast-email", Protected, sendBroadcastEmail);
+router.get("/admin/messages", Protected, getContactMessages);
 router.get("/messages", Protected, getContactMessages);
 router.put('/users/:userId/manualverify', Protected, manualactvateuser);
 router.put('/admins/:userId/verify', Protected, verifyAdmin);
